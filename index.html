@@ -1381,7 +1381,7 @@ const STAGES = {
          </button>
          <p style="margin-top:10px;">${pr.desc}</p>
          ${pr.chips.length ? `<div class="chips" style="justify-content:center;">${pr.chips.map(c => `<span class="chip">${c}</span>`).join("")}</div>` : ""}
-         ${pr.link ? `<a class="m-link" href="${pr.link}" target="_blank" rel="noopener">GitHub ↗</a>` : ""}`),
+         ${pr.link ? `<a class="m-link" href="${pr.link}" target="_blank" rel="noopener">${linkLabel(pr.link)} ↗</a>` : ""}`),
       `<p class="s-tag">Toolbox</p><h4>常用技术栈</h4>
        <p style="color:var(--muted);font-size:12.5px;">在这些项目里实际使用、持续打磨的工具。</p>
        <div class="chips" style="justify-content:center;margin-top:14px;">${PROFILE.techStack.map(c => `<span class="chip">${c}</span>`).join("")}</div>`
@@ -1509,6 +1509,10 @@ const reader = $("#reader");
 let view = "circle";   // circle = 大气泡 | article = 阅读页
 let articleReturnFocus = null;
 
+function linkLabel(url) {
+  return /github\.com/i.test(url || "") ? "GitHub" : "网站";
+}
+
 function openArticle(key, trigger) {
   const a = ARTICLES[key];
   if (!a || !openKey) return;
@@ -1519,7 +1523,7 @@ function openArticle(key, trigger) {
   $("#rDate").textContent = a.date || "";
   const attach =
     (a.chips && a.chips.length ? `<div class="chips" style="justify-content:center;">${a.chips.map(c => `<span class="chip">${c}</span>`).join("")}</div>` : "") +
-    (a.link ? `<a class="m-link" href="${a.link}" target="_blank" rel="noopener">GitHub ↗</a>` : "");
+    (a.link ? `<a class="m-link" href="${a.link}" target="_blank" rel="noopener">${linkLabel(a.link)} ↗</a>` : "");
   const image = a.image ? `<figure class="r-qr"><img src="${a.image}" alt="${a.imageAlt || ""}" /></figure>` : "";
   const screenshots = a.screenshots && a.screenshots.length
     ? `<div class="r-shots">${a.screenshots.map(s => `<figure class="r-shot ${s.layout === "portrait" ? "portrait" : "wide"}"><a class="r-shot-link" href="${s.src}" target="_blank" rel="noopener" title="查看原图"><img src="${s.src}" alt="${s.alt || ""}" loading="lazy" /></a><figcaption>${s.caption || ""}</figcaption></figure>`).join("")}</div>`
