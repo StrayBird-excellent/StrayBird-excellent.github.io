@@ -1,0 +1,11 @@
+# 静态站部署用：不发布任何本地/开发产物
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+_shot/
+shots/
+*.psd
+*.ai
+__pycache__/
+*.pyc

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>风又起时 · StrayBird</title>
+<meta name="description" content="一幅会呼吸的水墨。一座只有慢慢待着才会打开的画廊。">
+<meta name="theme-color" content="#f4efe3">
+<meta property="og:type" content="website">
+<meta property="og:title" content="风又起时 · StrayBird">
+<meta property="og:description" content="一幅会呼吸的水墨。一座只有慢慢待着才会打开的画廊。">
+<meta property="og:image" content="assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.86em' font-size='74' fill='%231b1a17'>墨</text></svg>">
+<link rel="preload" href="assets/fonts/straybird-serif.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/garamond-italic.woff2" as="font" type="font/woff2" crossorigin>
+<script>document.documentElement.classList.add('js');</script>
+<style>
+/* ═══════════════ fonts ═══════════════ */
+@font-face{font-family:'Serif SC';src:url('assets/fonts/straybird-serif.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap;}
+@font-face{font-family:'Garamond';src:url('assets/fonts/garamond-italic.woff2') format('woff2');font-weight:400;font-style:italic;font-display:swap;}
+
+:root{
+  --paper:#f4efe3;
+  --paper-warm:#f8f3e7;
+  --ink:#1b1a17;
+  --ink-60:rgba(27,26,23,.60);
+  --ink-38:rgba(27,26,23,.38);
+  --ink-16:rgba(27,26,23,.16);
+  --ink-08:rgba(27,26,23,.08);
+  --seal:#a8322a;
+  --gold:#b08a4a;
+  --serif:'Serif SC','Songti SC','STSong','SimSun',serif;
+  --italic:'Garamond','EB Garamond','Palatino Linotype',Georgia,serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --slow:1400ms;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--serif);
+  line-height:1.9;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+::selection{background:rgba(176,138,74,.28);color:var(--ink);}
+a{color:inherit;text-decoration:none;}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+
+/* ─── paper grain, the only decoration allowed ─── */
+body::before{
+  content:"";position:fixed;inset:0;z-index:900;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E");
+  mix-blend-mode:multiply;opacity:.9;
+}
+/* ─── the painting itself ─── */
+#canvasStage{
+  position:fixed;inset:0;z-index:0;
+  display:block;width:100%;height:100%;
+  padding:0;border:0;background:none;
+  cursor:pointer;-webkit-appearance:none;appearance:none;
+}
+#canvasStage canvas{display:block;width:100%;height:100%;}
+#canvasStage:focus-visible{outline:none;}
+#canvasStage:focus-visible canvas{outline:2px dashed rgba(27,26,23,.28);outline-offset:-14px;}
+.vignette{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(120% 100% at 50% 45%,transparent 45%,rgba(120,100,70,.10) 100%);
+}
+
+/* ═══════════════ 静默开场 ═══════════════ */
+#curtain{
+  position:fixed;inset:0;z-index:800;
+  background:var(--paper);
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity 1600ms var(--ease),visibility 1600ms;
+}
+#curtain.gone{opacity:0;visibility:hidden;}
+.curtain-line{
+  font-family:var(--italic);font-style:italic;
+  font-size:clamp(13px,1.5vw,15px);letter-spacing:.16em;color:var(--ink-38);
+  opacity:0;animation:curtainIn 2200ms var(--ease) 300ms forwards;
+}
+@keyframes curtainIn{to{opacity:1;}}
+
+/* ═══════════════ 题签（右上） ═══════════════ */
+.colophon{
+  position:fixed;top:clamp(24px,4vw,52px);right:clamp(22px,4vw,56px);
+  z-index:20;text-align:right;pointer-events:none;
+  opacity:0;transform:translateY(-8px);
+  transition:opacity var(--slow) var(--ease),transform var(--slow) var(--ease);
+}
+.colophon.show{opacity:1;transform:none;}
+.colophon .name{
+  font-size:clamp(13px,1.2vw,14px);letter-spacing:.42em;
+  color:var(--ink-60);text-indent:.42em;
+}
+.colophon .motto{
+  font-family:var(--italic);font-style:italic;
+  font-size:clamp(11px,1vw,12.5px);letter-spacing:.04em;
+  color:var(--ink-60);margin-top:2px;
+}
+.colophon .clock{
+  font-family:var(--italic);font-style:italic;
+  font-size:11px;letter-spacing:.1em;color:var(--ink-38);
+  margin-top:8px;font-variant-numeric:tabular-nums;
+}
+
+/* ═══════════════ 留白 ═══════════════ */
+/* Nothing is allowed in the middle until the visitor makes a move. */
+h1.hero{
+  position:fixed;left:8vw;top:50%;transform:translateY(-50%);
+  z-index:10;pointer-events:none;
+  font-weight:400;font-size:clamp(26px,3.2vw,42px);
+  letter-spacing:.22em;line-height:2.1;color:var(--ink);
+  writing-mode:vertical-rl;
+  opacity:0;
+  transition:opacity 2600ms var(--ease);
+}
+h1.hero.show{opacity:.92;}
+h1.hero .col{display:block;}
+h1.hero .col:nth-child(2){margin-top:.55em;color:var(--ink-60);}
+
+.hint{
+  position:fixed;left:50%;bottom:clamp(38px,6vh,64px);
+  transform:translateX(-50%);
+  z-index:10;pointer-events:none;text-align:center;
+  font-family:var(--italic);font-style:italic;
+  font-size:clamp(11px,1.05vw,13px);letter-spacing:.22em;
+  color:var(--ink-38);
+  opacity:0;transition:opacity 1800ms var(--ease);
+}
+.hint.show{opacity:1;animation:hintBreathe 5.5s ease-in-out infinite;}
+@keyframes hintBreathe{0%,100%{opacity:.55;}50%{opacity:1;}}
+
+/* ═══════════════ 长卷 ═══════════════ */
+#scroll{
+  position:fixed;inset:0;z-index:100;
+  pointer-events:none;
+  visibility:hidden;
+}
+#scroll.open{visibility:visible;pointer-events:auto;}
+.scroll-veil{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(244,239,227,.0),rgba(244,239,227,.55) 12%,rgba(244,239,227,.75) 50%,rgba(244,239,227,.55) 88%,rgba(244,239,227,0));
+  backdrop-filter:blur(3px) saturate(.92) sepia(.05);
+  -webkit-backdrop-filter:blur(3px) saturate(.92) sepia(.05);
+  opacity:0;transition:opacity 900ms var(--ease);
+}
+#scroll.open .scroll-veil{opacity:1;}
+
+.scroll-rail{
+  position:absolute;inset:0;
+  overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
+.scroll-rail::-webkit-scrollbar{display:none;}
+
+.scroll-inner{
+  max-width:min(600px,86vw);
+  margin:0 auto;
+  padding:clamp(76px,10vh,120px) 0 clamp(90px,13vh,140px);
+}
+
+/* each section arrives only when looked at */
+.seg{
+  opacity:0;transform:translateY(26px);
+  transition:opacity 1300ms var(--ease),transform 1300ms var(--ease);
+  padding:0 0 clamp(40px,6.5vh,64px);
+}
+.seg.in{opacity:1;transform:none;}
+
+.seg-mark{
+  display:flex;align-items:baseline;gap:14px;
+  margin-bottom:16px;
+}
+.seg-mark .num{
+  font-family:var(--italic);font-style:italic;
+  font-size:11px;letter-spacing:.2em;color:var(--ink-38);
+}
+.seg-mark .line{flex:1;height:1px;background:linear-gradient(90deg,var(--ink-16),transparent);}
+.seg-mark .en{
+  font-family:var(--italic);font-style:italic;
+  font-size:11px;letter-spacing:.24em;color:var(--ink-60);text-transform:lowercase;
+}
+
+.seg h2{
+  font-weight:400;font-size:clamp(19px,2vw,24px);
+  letter-spacing:.2em;line-height:1.7;color:var(--ink);
+  margin-bottom:20px;
+}
+.seg p{
+  font-size:clamp(14px,1.35vw,16px);
+  line-height:2.05;color:var(--ink-60);
+  letter-spacing:.03em;margin-bottom:.95em;
+  text-align:justify;
+}
+.seg p.lead{color:var(--ink);}
+.seg p.verse{
+  font-family:var(--italic);font-style:italic;
+  font-size:clamp(13px,1.2vw,15px);line-height:2.1;
+  color:var(--ink-38);letter-spacing:.02em;text-align:center;
+  margin:2em 0;
+}
+.seg em{
+  font-style:normal;color:var(--ink);
+  border-bottom:1px solid var(--ink-16);padding-bottom:1px;
+}
+
+/* ─── 作品条目 ─── */
+.work{
+  display:block;position:relative;
+  padding:24px 0;border-top:1px solid var(--ink-08);
+  cursor:pointer;
+  transition:padding 600ms var(--ease);
+}
+.work:last-of-type{border-bottom:1px solid var(--ink-08);}
+.work:hover{padding-left:14px;}
+.work::before{
+  content:"";position:absolute;left:0;top:50%;
+  width:0;height:1px;background:var(--seal);
+  transition:width 600ms var(--ease);
+}
+.work:hover::before{width:10px;}
+.work-t{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+.work-name{font-size:clamp(15px,1.5vw,17px);letter-spacing:.1em;color:var(--ink);}
+.work-en{
+  font-family:var(--italic);font-style:italic;
+  font-size:11.5px;letter-spacing:.12em;color:var(--ink-38);
+}
+.work-d{
+  margin-top:6px;font-size:13.5px;line-height:1.95;
+  color:var(--ink-60);letter-spacing:.02em;
+}
+.work-panel{
+  overflow:hidden;max-height:0;
+  transition:max-height 780ms var(--ease),margin 780ms var(--ease);
+}
+.work.open .work-panel{max-height:420px;margin-top:14px;}
+.work-panel p{
+  font-size:13.5px;line-height:2.1;color:var(--ink-60);
+  margin-bottom:.9em;text-align:justify;
+}
+.work-tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+.work-tags span{
+  font-family:var(--italic);font-style:italic;
+  font-size:10.5px;letter-spacing:.1em;color:var(--ink-60);
+  padding:2px 9px;border:1px solid var(--ink-08);border-radius:99px;
+}
+.work-go{
+  display:inline-block;margin-top:12px;
+  font-family:var(--italic);font-style:italic;
+  font-size:11.5px;letter-spacing:.16em;color:var(--ink-60);
+  border-bottom:1px solid var(--ink-16);
+}
+
+/* ─── 留痕（联系方式） ─── */
+.trace{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:26px;}
+.trace a,.trace button{
+  font-size:13.5px;letter-spacing:.12em;color:var(--ink-60);
+  position:relative;padding-bottom:3px;
+  transition:color 400ms var(--ease);
+}
+.trace a::after,.trace button::after{
+  content:"";position:absolute;left:0;bottom:0;width:100%;height:1px;
+  background:var(--ink-16);transform:scaleX(0);transform-origin:right;
+  transition:transform 500ms var(--ease);
+}
+.trace a:hover::after,.trace button:hover::after{transform:scaleX(1);transform-origin:left;}
+.trace a:hover,.trace button:hover{color:var(--ink);}
+.trace .note{font-family:var(--italic);font-style:italic;font-size:11px;letter-spacing:.06em;color:var(--ink-16);}
+
+/* ─── 印 ─── */
+.seal{
+  display:block;margin:clamp(40px,7vh,70px) auto 0;
+  width:52px;height:52px;opacity:0;transform:scale(.9) rotate(-2deg);
+  transition:opacity 1200ms var(--ease),transform 1200ms var(--ease);
+}
+.seg.in .seal{opacity:.9;transform:none;}
+.seal svg{width:100%;height:100%;display:block;}
+
+/* ─── 关闭 ─── */
+.close{
+  position:fixed;top:clamp(22px,3.6vw,40px);right:clamp(22px,4vw,52px);
+  z-index:120;width:42px;height:42px;
+  display:grid;place-items:center;
+  opacity:0;pointer-events:none;
+  transition:opacity 700ms var(--ease),transform 700ms var(--ease);
+}
+#scroll.open ~ .close{opacity:1;pointer-events:auto;}
+.close:hover{transform:rotate(90deg);}
+.close span{
+  font-family:var(--italic);font-style:italic;
+  font-size:20px;color:var(--ink-38);line-height:1;
+}
+
+/* ─── 卷首 ─── */
+.scroll-head{text-align:center;padding-bottom:clamp(50px,9vh,80px);}
+.scroll-head .t1{
+  font-size:clamp(15px,1.6vw,17px);letter-spacing:.5em;text-indent:.5em;
+  color:var(--ink-38);
+}
+.scroll-head .t2{
+  font-family:var(--italic);font-style:italic;
+  font-size:clamp(12px,1.2vw,13.5px);letter-spacing:.26em;
+  color:var(--ink-38);margin-top:8px;
+}
+.scroll-head .rule{
+  width:1px;height:clamp(40px,7vh,70px);margin:clamp(26px,5vh,44px) auto 0;
+  background:linear-gradient(180deg,var(--ink-16),transparent);
+}
+
+/* ═══════════════ 移动端 ═══════════════ */
+@media (max-width:720px){
+  h1.hero{
+    writing-mode:horizontal-tb;
+    left:50%;top:46%;transform:translate(-50%,-50%);
+    text-align:center;letter-spacing:.26em;text-indent:.26em;
+    font-size:clamp(22px,6.4vw,30px);line-height:1.9;
+  }
+  h1.hero .col{display:inline;}
+  h1.hero .col:nth-child(2){margin:0;display:block;margin-top:.3em;}
+  .colophon{text-align:center;right:0;left:0;top:clamp(20px,4vh,32px);}
+  .colophon .name{font-size:12px;letter-spacing:.36em;}
+  .colophon .clock{display:none;}
+  .hint{bottom:clamp(30px,5vh,46px);letter-spacing:.16em;}
+  .scroll-inner{padding-top:clamp(70px,11vh,110px);}
+  .seg p{text-align:left;line-height:2.05;}
+  .work.open .work-panel{max-height:640px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
+  html{scroll-behavior:auto;}
+  .hint.show{animation:none;opacity:.8;}
+}
+</style>
+</head>
+<body>
+
+<!-- 静默开场 -->
+<div id="curtain"><span class="curtain-line">请稍候，墨尚未干</span></div>
+
+<!-- 画：整幅就是一个按钮，键盘也能展开 -->
+<button id="canvasStage" type="button" aria-label="展开长卷">
+  <canvas id="paint" aria-hidden="true"></canvas>
+</button>
+<div class="vignette" aria-hidden="true"></div>
+
+<!-- 题签 -->
+<div class="colophon" id="colophon">
+  <div class="name">无人来处</div>
+  <div class="motto">somewhere the wind forgets</div>
+  <div class="clock" id="clock"></div>
+</div>
+
+<!-- 留白 -->
+<h1 class="hero" id="hero">
+  <span class="col">风又起时</span>
+  <span class="col">我仍在路上</span>
+</h1>
+
+<p class="hint" id="hint">停留片刻，它会向你展开</p>
+
+<!-- 长卷 -->
+<div id="scroll" role="dialog" aria-modal="true" aria-label="长卷">
+  <div class="scroll-veil"></div>
+  <div class="scroll-rail" id="scrollRail">
+    <div class="scroll-inner" id="scrollInner"></div>
+  </div>
+</div>
+<button class="close" id="closeBtn" aria-label="合上长卷"><span>✕</span></button>
+
+<noscript>
+  <p style="padding:40px;text-align:center;color:var(--ink-60)">
+    这幅画需要 JavaScript 才能落笔。
+  </p>
+</noscript>
+
+<script src="watercolor.js"></script>
+<script src="content.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

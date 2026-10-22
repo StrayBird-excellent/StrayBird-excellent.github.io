@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StrayBird · 一只离群的飞鸟</title>
+<meta name="description" content="StrayBird — 一张莎草纸、一支欧式钢笔、一封斜体的信，和一园子飘着的气泡。A stray bird, writing its own lines." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕊️</text></svg>" />
+<style>
+  :root {
+    --gold: #c9994f;
+    --gold-deep: #a97b2f;
+    --ink: #3f362a;
+    --ink-soft: #6b5f4c;
+    --paper: #fdf9ee;
+    --bg: #faf6ef;
+    --card: #fffdf8;
+    --text: #40392f;
+    --muted: #8a8172;
+    --line: #eee4d3;
+    --serif: Georgia, "Palatino Linotype", "Noto Serif SC", "Songti SC", "SimSun", serif;
+    --italic: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
+    --sans: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: #e8c98f; color: #4a3f2c; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; }
+
+  /* 颗粒纹理（莎草纸 / 气泡页共用） */
+  .grain::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+  }
+
+  .scene { position: fixed; inset: 0; }
+
+  /* ============================================================
+     第一幕 · 莎草纸上的钢笔与信
+     ============================================================ */
+  #scenePaper {
+    opacity: 0; transition: opacity .9s ease;
+    background:
+      radial-gradient(95% 75% at 70% 14%, rgba(255, 244, 214, .95) 0%, rgba(255, 244, 214, 0) 58%),
+      linear-gradient(180deg, #fdefe2 0%, #fcead9 32%, #f8e7d6 60%, #f3e4d1 100%);
+  }
+  #scenePaper.in { opacity: 1; }
+  #scenePaper.gone { opacity: 0 !important; pointer-events: none; }
+  /* 用了生成背景图后，CSS 画的太阳云朵山丘就交给画本身 */
+  #scenePaper.has-bg .sky { display: none; }
+  #scenePaper.has-bg::before { content: none; }
+  #scenePaper::before {
+    /* 桌面尽头的一抹暖光，像晨光落在桌沿 */
+    content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(120% 70% at 50% 110%, rgba(255, 246, 224, .8) 0%, rgba(255, 246, 224, 0) 55%);
+  }
+  /* 晨曦里的软云、远山与光尘 */
+  .sky { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+  .sun {
+    position: absolute; top: 6%; right: 12%; width: 360px; height: 360px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 246, 218, .95) 0%, rgba(255, 232, 182, .55) 36%, rgba(255, 232, 182, 0) 70%);
+  }
+  .cloud {
+    position: absolute; border-radius: 999px; background: rgba(255, 255, 255, .6);
+    filter: blur(9px); animation: cloudDrift linear infinite alternate;
+  }
+  @keyframes cloudDrift { from { transform: translateX(0); } to { transform: translateX(38vw); } }
+  .hill { position: absolute; border-radius: 50%; }
+  @media (pointer: fine) { #scenePaper.live { cursor: none; } }
+
+  .paper-wrap {
+    position: absolute; left: 50%; top: 50%; z-index: 5;
+    width: min(740px, 92vw);
+    aspect-ratio: 760 / 560;
+    transform: translate(-50%, -50%) rotate(-1.2deg);
+    transition: transform .5s cubic-bezier(.3, .7, .3, 1);
+  }
+  .paper-wrap > svg.sheet { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible;
+    filter: drop-shadow(0 18px 24px rgba(196, 150, 88, .32)) drop-shadow(0 4px 8px rgba(196, 150, 88, .18));
+    transition: opacity .6s ease, transform .85s cubic-bezier(.5, .1, .3, 1);
+  }
+  .paper-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill;
+    filter: drop-shadow(0 18px 24px rgba(196, 150, 88, .32)) drop-shadow(0 4px 8px rgba(196, 150, 88, .18));
+    transition: opacity .6s ease, transform .85s cubic-bezier(.5, .1, .3, 1);
+  }
+  /* 信自己卷起来：信迹淡去，纸页轻轻立起化作纸卷 */
+  .paper-wrap.rolling svg.sheet, .paper-wrap.rolling .paper-img { opacity: 0; transform: perspective(1000px) rotateX(36deg) translateY(5%) scale(.97); }
+  .paper-wrap.rolling .intro { opacity: 0; transition: opacity .45s ease; }
+
+  /* 卷好的信卷 */
+  #scrollEl {
+    position: absolute; left: 50%; top: 50%; z-index: 30;
+    width: 150px; height: 106px; margin: -53px 0 0 -75px;
+    opacity: 0; pointer-events: none; will-change: transform;
+    transition: opacity .55s ease, transform .5s cubic-bezier(.4, .15, .25, 1);
+    filter: drop-shadow(0 10px 12px rgba(196, 150, 88, .35));
+  }
+  #scrollEl.in { opacity: 1; }
+  #scrollEl.taken { opacity: 0; }
+  #scrollEl.idle { animation: scrollBob 3.2s ease-in-out infinite alternate; }
+  @keyframes scrollBob { from { transform: translateY(-3px) rotate(-1.6deg); } to { transform: translateY(3px) rotate(1.6deg); } }
+  #scrollEl svg, #scrollEl img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+  /* 信 · 意大利式斜体英文 */
+  .intro {
+    position: absolute; inset: 13% 11%; z-index: 7;
+    display: flex; flex-direction: column; justify-content: center; gap: 1.15em;
+    text-align: center; pointer-events: none;
+    font-family: var(--italic); font-style: italic; color: var(--ink);
+  }
+  .intro .wline { font-size: clamp(12.5px, 2.5vw, 17.5px); line-height: 1.9; white-space: pre-wrap; }
+  .intro .wline.quote { font-size: clamp(14px, 2.9vw, 21px); color: #3a3225; }
+  .intro .wline.sign { font-size: clamp(11.5px, 2.1vw, 15px); color: var(--ink-soft); }
+  .intro .ch { opacity: 0; filter: blur(3px); transform: translateY(4px); transition: opacity .3s ease, filter .3s ease, transform .3s ease; }
+  .intro.writing .ch { transition-duration: .12s; }
+  .intro .ch.on { opacity: 1; filter: blur(0); transform: none; }
+  .intro.fade .ch { opacity: 0; transition: opacity .5s ease; }
+
+  /* 提示语 */
+  .hint {
+    position: absolute; left: 50%; bottom: 6.5%; z-index: 8; transform: translateX(-50%);
+    width: max-content; max-width: 92vw; text-align: center;
+    color: rgba(74, 56, 26, .8); font-size: 13.5px; letter-spacing: .08em;
+    text-shadow: 0 1px 0 rgba(255, 246, 224, .5);
+    opacity: 0; transition: opacity .8s ease;
+  }
+  .hint em { font-style: italic; font-family: var(--italic); }
+  .hint.show { opacity: 1; }
+  .hint.pulse { animation: hintPulse 2.4s ease-in-out infinite; }
+  @keyframes hintPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+  /* 欧式钢笔（笔尖为定位原点） */
+  #pen {
+    position: absolute; left: 0; top: 0; z-index: 40;
+    width: 84px; height: 154px;
+    transform-origin: 42px 148px;
+    pointer-events: none; will-change: transform;
+    filter: drop-shadow(4px 5px 4px rgba(196, 150, 88, .3));
+    transition: opacity .6s ease;
+  }
+  #pen.off { opacity: 0; }
+  #pen svg, #pen img { display: block; width: 100%; height: 100%; }
+
+  /* 衔信卷的飞鸟 */
+  #bird {
+    position: absolute; left: 0; top: 0; z-index: 45;
+    width: 130px; height: 84px;
+    pointer-events: none; will-change: transform;
+    opacity: 0; transition: opacity .3s ease;
+    filter: drop-shadow(2px 7px 6px rgba(196, 150, 88, .3));
+  }
+  #bird.show { opacity: 1; }
+  #bird .bird-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  #bird .wing-far  { transform-box: fill-box; transform-origin: 100% 90%; animation: flap .55s ease-in-out infinite alternate; }
+  #bird .wing-near { transform-box: fill-box; transform-origin: 100% 95%; animation: flap .55s ease-in-out infinite alternate-reverse; }
+  @keyframes flap { from { transform: rotate(-16deg); } to { transform: rotate(13deg); } }
+
+  /* 飞行时落下的羽毛 */
+  .feather { position: absolute; z-index: 44; pointer-events: none; animation: featherFall var(--dur, 2.2s) ease-in forwards; }
+  @keyframes featherFall {
+    0%   { transform: translate(0, 0) rotate(0deg); opacity: .95; }
+    100% { transform: translate(var(--dx, 40px), var(--dy, 220px)) rotate(var(--rot, 160deg)); opacity: 0; }
+  }
+
+  /* ============================================================
+     第二幕 · 气泡园子
+     ============================================================ */
+  #sceneGarden {
+    background:
+      radial-gradient(120% 90% at 50% 0%, #fff8ef 0%, rgba(255, 248, 239, 0) 55%),
+      repeating-linear-gradient(94deg, rgba(190,160,105,.045) 0 2px, rgba(190,160,105,0) 2px 9px),
+      linear-gradient(180deg, #f3ded5 0%, #f5e6d7 42%, #e8d7c0 100%);
+    opacity: 0; transition: opacity .9s ease; overflow: hidden;
+  }
+  #sceneGarden.in { opacity: 1; }
+
+  .garden-line {
+    position: absolute; top: 11%; left: 50%; transform: translateX(-50%);
+    z-index: 5; width: max-content; max-width: 90vw; text-align: center;
+    font-family: var(--italic); font-style: italic; color: var(--ink-soft);
+    font-size: clamp(14px, 2.4vw, 18px); letter-spacing: .04em;
+    opacity: 0;
+  }
+  #sceneGarden.in .garden-line { animation: lineGlow 5.2s ease 1s forwards; }
+  @keyframes lineGlow { 0% { opacity: 0; transform: translateX(-50%) translateY(10px); } 22% { opacity: 1; transform: translateX(-50%) translateY(0); } 74% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* 气泡之间飘过的樱花：在内容之下，不抢点击 */
+  .petals { position: absolute; inset: 0; z-index: 3; overflow: hidden; pointer-events: none; }
+  .petal {
+    position: absolute; top: -14vh; left: var(--x); width: var(--s); aspect-ratio: 1.25;
+    border-radius: 100% 0 100% 0;
+    background: radial-gradient(circle at 28% 24%, #ffe8ef 0 12%, #f18daa 40%, #c75d80 100%);
+    box-shadow: 0 3px 7px rgba(151, 62, 91, .3);
+    opacity: 0; will-change: transform, opacity;
+    animation: petalFall var(--dur) linear var(--delay) infinite paused;
+  }
+  #sceneGarden.in .petal { animation-play-state: running; }
+  @keyframes petalFall {
+    0% { transform: translate3d(0, -8vh, 0) rotate(0deg); opacity: 0; }
+    12% { opacity: .96; }
+    100% { transform: translate3d(var(--drift), 112vh, 0) rotate(var(--turn)); opacity: 0; }
+  }
+
+  .bubbles { position: absolute; inset: 0; z-index: 4; }
+
+  .bubble {
+    position: absolute; left: var(--x); top: var(--y);
+    width: var(--sz, 128px); height: var(--sz, 128px);
+    margin: calc(var(--sz, 128px) / -2) 0 0 calc(var(--sz, 128px) / -2);
+    border-radius: 50%;
+    border: 1px solid rgba(178, 146, 88, .38);
+    background:
+      radial-gradient(120% 120% at 30% 24%, rgba(255,255,255,.85) 0%, rgba(255,253,246,.42) 38%, rgba(240,222,180,.28) 72%, rgba(226,203,152,.34) 100%);
+    box-shadow:
+      inset 0 2px 10px rgba(255, 255, 255, .65),
+      inset 0 -8px 16px rgba(190, 160, 100, .18),
+      0 14px 30px rgba(150, 118, 62, .16);
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    text-align: center; padding: 12px; cursor: pointer;
+    opacity: 0;
+    transition: opacity .7s ease var(--d, 0s), scale .3s ease, border-color .3s ease, box-shadow .3s ease, background .3s ease;
+  }
+  #sceneGarden.in .bubble { opacity: 1; animation: pop .8s cubic-bezier(.34,1.45,.44,1) var(--d, 0s) backwards,
+    buoy var(--bd, 7s) ease-in-out var(--bdel, 0s) infinite alternate; }
+  @keyframes pop { from { scale: .35; opacity: 0; } to { scale: 1; opacity: 1; } }
+  .bubble:hover, .bubble:focus-visible {
+    border-color: rgba(180, 136, 60, .8);
+    box-shadow:
+      inset 0 2px 10px rgba(255, 255, 255, .8),
+      inset 0 -8px 16px rgba(190, 160, 100, .22),
+      0 20px 40px rgba(150, 118, 62, .26);
+    animation-play-state: paused;
+  }
+  .bubble:hover { scale: 1.06; }
+  .bubble:focus-visible { outline: 2px dashed var(--gold); outline-offset: 4px; }
+  @keyframes buoy { from { transform: translateY(-6px); } to { transform: translateY(7px); } }
+
+  .b-emoji { font-size: 22px; line-height: 1.15; }
+  .b-title { font-family: var(--serif); font-size: 14.5px; font-weight: 600; color: #4c4335; line-height: 1.35; }
+  .b-sub { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #a08d68; }
+  .bubble.center { --sz: 168px; cursor: default; }
+  .bubble.center .b-title { font-size: 21px; letter-spacing: .04em; }
+  .bubble.center .b-value { font-size: 12px; color: var(--muted); }
+  .bubble .b-value { font-size: 12.5px; color: #6b5f4c; line-height: 1.4; }
+
+  /* 栖息的鸟 · 点它回到纸上 */
+  .perch {
+    position: absolute; top: 22px; right: 26px; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    font-size: 11px; letter-spacing: .14em;
+    opacity: 0; transition: opacity .8s ease .9s, transform .3s ease;
+  }
+  #sceneGarden.in .perch { opacity: 1; }
+  .perch:hover { transform: translateY(-3px); color: #7a6a4f; }
+  .perch svg { display: block; }
+  .perch .pw1 { transform-box: fill-box; transform-origin: 100% 90%; animation: perchFlap 5.5s ease-in-out infinite; }
+  @keyframes perchFlap { 0%, 88%, 100% { transform: rotate(0); } 92% { transform: rotate(-14deg); } 96% { transform: rotate(10deg); } }
+
+  .garden-foot {
+    position: absolute; bottom: 16px; left: 0; right: 0; z-index: 5;
+    text-align: center; color: var(--muted); font-size: 12px; letter-spacing: .06em;
+    opacity: 0; transition: opacity 1s ease 1.6s;
+  }
+  #sceneGarden.in .garden-foot { opacity: 1; }
+
+  /* 光尘 */
+  .mote { position: absolute; bottom: -10px; z-index: 2; border-radius: 50%;
+    background: rgba(201, 153, 79, .4); animation: moteUp linear infinite; }
+  @keyframes moteUp { 0% { transform: translateY(0); opacity: .45; } 100% { transform: translateY(-106vh); opacity: 0; } }
+
+  /* 展开的大气泡：点分类气泡后放大到屏幕中央 */
+  .stage-big {
+    position: fixed; z-index: 60; border-radius: 50%;
+    border: 1px solid rgba(178, 146, 88, .42);
+    background:
+      radial-gradient(120% 120% at 30% 24%, rgba(255,255,255,.92) 0%, rgba(255,253,246,.55) 38%, rgba(240,222,180,.38) 72%, rgba(226,203,152,.44) 100%);
+    box-shadow:
+      inset 0 2px 12px rgba(255, 255, 255, .7),
+      inset 0 -10px 22px rgba(190, 160, 100, .22),
+      0 26px 70px rgba(150, 118, 62, .3);
+    /* 大圆会在展开时连续改变尺寸；避免在这个过程中重绘 backdrop-filter 而闪屏。 */
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition:
+      left .8s cubic-bezier(.3, .75, .22, 1), top .8s cubic-bezier(.3, .75, .22, 1),
+      width .8s cubic-bezier(.3, .75, .22, 1), height .8s cubic-bezier(.3, .75, .22, 1),
+      opacity .4s ease;
+  }
+  .stage-big.open { opacity: 1; pointer-events: auto; }
+  .stage-big.single .s-arrow, .stage-big.single .s-dots { display: none; }
+  /* 二级：气泡缩成左上角的小圆，正文在中间展开 */
+  .stage-big.min { cursor: pointer; }
+  .stage-big.min .s-head, .stage-big.min .s-viewport, .stage-big.min .s-arrow,
+  .stage-big.min .s-dots, .stage-big.min .s-hint { opacity: 0 !important; pointer-events: none !important; transition-delay: 0s !important; }
+  .s-chip {
+    display: none; position: absolute; inset: 0; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    border: 0; border-radius: inherit; background: transparent; color: inherit; cursor: pointer;
+  }
+  .stage-big.min .s-chip { display: flex; }
+  .s-chip span { font-size: 20px; line-height: 1.2; }
+  .s-chip b { font-family: var(--serif); font-size: 13px; color: #4c4335; }
+
+  /* 文章阅读页 */
+  .reader {
+    position: fixed; z-index: 70; left: 50%; top: 50%;
+    width: min(740px, 88vw); max-height: 78vh; overflow-y: auto; scrollbar-width: none;
+    transform: translate(-50%, -46%) scale(.96); opacity: 0; pointer-events: none;
+    background: linear-gradient(165deg, rgba(255, 253, 246, .98), rgba(250, 243, 226, .98));
+    border: 1px solid rgba(178, 146, 88, .45); border-radius: 18px;
+    box-shadow: 0 30px 80px rgba(90, 66, 30, .35);
+    padding: 30px 44px 28px; text-align: center;
+    transition: opacity .45s ease, transform .45s cubic-bezier(.3, .7, .3, 1);
+  }
+  .reader::-webkit-scrollbar { display: none; }
+  .reader.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+  .r-close {
+    position: absolute; top: 12px; right: 14px; width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid rgba(178, 146, 88, .4); background: rgba(255, 255, 255, .65);
+    color: #7a6a4f; font-size: 13px; line-height: 1; cursor: pointer; transition: all .25s;
+  }
+  .r-close:hover { background: #f3e7cf; transform: rotate(90deg); }
+  .r-title { font-family: var(--serif); font-size: 23px; font-weight: 600; color: #3d362b; margin: 4px 0 2px; text-wrap: balance; }
+  .r-date { font-size: 11px; letter-spacing: .18em; color: #a08d68; margin-bottom: 14px; }
+  .r-body { text-align: left; font-size: 14.5px; line-height: 2.15; color: #4a4033; }
+  .r-body p { text-indent: 2em; }
+  .r-body p + p { margin-top: 12px; }
+  .r-body .r-attach { text-align: center; text-indent: 0; margin-top: 16px; }
+  .r-qr { width: min(100%, 260px); margin: 0 auto 16px; overflow: hidden; border: 1px solid #eadcc2; border-radius: 14px; background: #fff; }
+  .r-qr img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; object-position: center; }
+  .r-shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 20px; }
+  .r-shot { margin: 0; overflow: hidden; border: 1px solid #eadcc2; border-radius: 14px; background: #fff; box-shadow: 0 8px 20px rgba(108, 78, 35, .09); }
+  .r-shot.wide { grid-column: 1 / -1; }
+  .r-shot-link { display: block; }
+  .r-shot img { display: block; width: 100%; height: auto; }
+  .r-shot.portrait { align-self: start; }
+  .r-shot.portrait img { object-fit: contain; background: #f5f5f5; }
+  .r-shot figcaption { padding: 7px 11px 8px; color: #8d7956; font-size: 11px; letter-spacing: .08em; line-height: 1.55; text-align: center; }
+
+  /* 目录条目 */
+  .s-list { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+  .s-item {
+    display: flex; flex-direction: column; gap: 1px; align-items: center;
+    background: rgba(255, 255, 255, .5); border: 1px solid rgba(178, 146, 88, .28); border-radius: 14px;
+    padding: 10px 16px; cursor: pointer; transition: all .25s; font-family: inherit; width: 100%;
+  }
+  .s-item:hover { border-color: rgba(180, 136, 60, .65); background: rgba(255, 255, 255, .82); transform: translateY(-1px); box-shadow: 0 8px 18px rgba(150, 118, 62, .15); }
+  .si-title { font-family: var(--serif); font-size: 15.5px; color: #4c4335; font-weight: 600; }
+  .si-meta { font-size: 10.5px; letter-spacing: .14em; color: #a08d68; text-transform: uppercase; }
+  .s-head { text-align: center; opacity: 0; transform: translateY(10px); transition: opacity .45s ease .3s, transform .45s ease .3s; }
+  .stage-big.open .s-head { opacity: 1; transform: none; }
+  .s-emoji { font-size: 27px; line-height: 1.2; }
+  .s-title { font-family: var(--serif); font-size: 21px; font-weight: 600; color: #4c4335; }
+  .s-sub { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #a08d68; }
+  .s-viewport {
+    position: relative; width: 64%; height: 54%; margin-top: 10px;
+    overflow: hidden; touch-action: pan-y; cursor: grab;
+    opacity: 0; transition: opacity .5s ease .42s;
+  }
+  .stage-big.open .s-viewport { opacity: 1; }
+  .s-viewport:active { cursor: grabbing; }
+  .s-track { display: flex; height: 100%; transition: transform .55s cubic-bezier(.3, .75, .25, 1); }
+  .s-page {
+    position: relative; flex: 0 0 100%; padding: 6px 12px; overflow-y: auto; scrollbar-width: none;
+    display: flex; flex-direction: column; text-align: center;
+  }
+  .s-page::-webkit-scrollbar { display: none; }
+  .s-inner { margin: auto 0; }
+  .s-page .s-tag { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: #a08d68; margin-bottom: 4px; }
+  .s-page h4 { font-family: var(--serif); font-size: 17px; font-weight: 600; color: #4c4335; margin-bottom: 8px; }
+  .s-page p { font-size: 13.5px; color: #55493a; line-height: 1.9; }
+  .s-page .row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed #eaddc2; font-size: 13px; }
+  .s-page .row .lbl { color: var(--muted); white-space: nowrap; }
+  .s-page .row .val { font-weight: 600; text-align: right; }
+  .s-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid rgba(178, 146, 88, .45); background: rgba(255, 255, 255, .65);
+    color: #7a6a4f; font-size: 18px; line-height: 1; cursor: pointer; z-index: 5;
+    opacity: 0; transition: opacity .4s ease .5s, background .25s, transform .25s;
+  }
+  .stage-big.open .s-arrow { opacity: 1; }
+  .s-arrow.prev { left: 3.5%; }
+  .s-arrow.next { right: 3.5%; }
+  .s-arrow:hover { background: #f6ecd4; transform: translateY(-50%) scale(1.08); }
+  .s-arrow[disabled] { opacity: .2 !important; pointer-events: none; }
+  .s-dots { display: flex; gap: 8px; margin-top: 12px; opacity: 0; transition: opacity .4s ease .5s; }
+  .stage-big.open .s-dots { opacity: 1; }
+  .s-dot { width: 7px; height: 7px; border-radius: 50%; border: none; padding: 0; background: rgba(160, 130, 80, .35); cursor: pointer; transition: all .3s; }
+  .s-dot.on { background: var(--gold); transform: scale(1.3); }
+  .s-hint {
+    position: absolute; bottom: 6.5%; left: 0; right: 0; text-align: center;
+    font-size: 11px; letter-spacing: .12em; color: rgba(122, 106, 79, .7);
+    opacity: 0; transition: opacity .5s ease .65s;
+  }
+  .stage-big.open .s-hint { opacity: 1; }
+  /* 展开时其余气泡退场 */
+  /* 弹层展开时冻结后台气泡。之前的缩放和浮动动画叠在一起，会在某些浏览器里闪屏。 */
+  .bubbles.zoomed .bubble {
+    opacity: 0 !important; pointer-events: none; animation-play-state: paused;
+    transition: opacity .25s ease;
+  }
+  .bubble.deco { pointer-events: none; }
+  .bubble.deco::after { content: "✦"; font-size: 12px; color: rgba(160, 130, 80, .45); }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+  .chip { color: #7a6a4f; border: 1px solid #f0e3c8; background: #f6efe0; border-radius: 999px; padding: 4px 13px; font-size: 12.5px; }
+  .m-link {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 14px;
+    color: #5a6f99; background: #eaeff8; border: 1px solid #cfdaf0;
+    border-radius: 999px; padding: 6px 16px; font-size: 12.5px; letter-spacing: .06em;
+    transition: all .25s;
+  }
+  .m-link:hover { background: #dbe4f2; transform: translateY(-1px); }
+  .contact-row { display: inline-flex; justify-content: center; }
+  .contact-icon { width: 16px; height: 16px; display: grid; place-items: center; flex: none; }
+  .contact-icon svg { width: 100%; height: 100%; }
+  .contact-note { color: #a08d68; font-size: 11px; letter-spacing: 0; }
+  .contact-arrow, .contact-caret { font-size: 11px; color: #7e91b5; }
+  .contact-trigger { margin-top: 0; cursor: pointer; }
+  .qr-popover {
+    position: absolute; z-index: 12; left: 50%; top: 50%; width: 190px; padding: 9px;
+    background: rgba(255,253,247,.97); border: 1px solid rgba(178,146,88,.42); border-radius: 14px;
+    box-shadow: 0 18px 38px rgba(109,78,35,.25); opacity: 0; visibility: hidden; pointer-events: none;
+    transform: translate(-50%,-50%) scale(.96); transition: opacity .22s ease, transform .22s ease, visibility .22s;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .contact-row:hover .qr-popover, .contact-row:focus-within .qr-popover {
+      opacity: 1; visibility: visible; transform: translate(-50%,-50%) scale(1);
+    }
+  }
+  .qr-image { aspect-ratio: 1; overflow: hidden; border-radius: 9px; background: #fff; }
+  .qr-image img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+  .qr-caption { display: block; padding: 7px 2px 1px; text-align: center; color: #7a6a4f; font-size: 11px; letter-spacing: .08em; }
+
+  noscript div { padding: 40px; text-align: center; }
+
+  /* ============================================================
+     响应式与降级
+     ============================================================ */
+  @media (max-width: 720px) {
+    .bubbles { display: flex; flex-wrap: wrap; align-content: center; justify-content: center;
+      gap: 16px; padding: 84px 20px 60px; }
+    .bubble { position: static; margin: 0; --sz: 138px; }
+    .bubble.center { --sz: 168px; }
+    .garden-line { top: 3%; padding: 0 64px; font-size: 13px; }
+    .perch { top: 12px; right: 12px; }
+    .perch span { display: none; }
+    .perch svg { width: 54px; height: 34px; }
+    #pen { width: 64px; height: 117px; transform-origin: 32px 113px; }
+    .bubble.deco { display: none; }
+    .petal:nth-child(n + 11) { display: none; }
+    .s-arrow { display: none; }
+    .s-viewport { width: 78%; height: 54%; }
+    .s-page { padding: 4px 4px; }
+    .s-page p { font-size: 12.5px; }
+    .s-title { font-size: 18px; }
+    .reader {
+      top: calc(50% + 56px); width: calc(100vw - 28px); max-height: calc(100dvh - 136px);
+      padding: 24px 20px 22px; border-radius: 16px;
+    }
+    .r-title { padding: 0 22px; font-size: 20px; line-height: 1.45; }
+    .r-body { font-size: 14px; line-height: 1.95; }
+    .r-shots { grid-template-columns: 1fr; }
+    .r-shot.wide { grid-column: auto; }
+    .r-shot.portrait { width: min(100%, 280px); justify-self: center; }
+  }
+  @media (pointer: coarse) {
+    #pen { display: none; }
+    .hint { font-size: 12px; }
+    .qr-popover { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bubble, .perch .pw1, .mote, .petal { animation: none !important; }
+    #bird .wing-far, #bird .wing-near { animation: none !important; }
+    .intro .ch { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ 第一幕 · 莎草纸 ══════════════ -->
+<div class="scene grain" id="scenePaper" aria-label="晨光里摊在桌上的一封信，钢笔会跟着鼠标走；点击纸面可以读信">
+
+  <!-- 晨曦 -->
+  <div class="sky" aria-hidden="true">
+    <div class="sun"></div>
+    <div class="cloud" style="top:13%; left:7%;  width:175px; height:44px; animation-duration:76s;"></div>
+    <div class="cloud" style="top:25%; left:56%; width:122px; height:32px; animation-duration:58s; animation-delay:-26s; opacity:.7;"></div>
+    <div class="cloud" style="top:38%; left:28%; width:92px;  height:24px; animation-duration:66s; animation-delay:-12s; opacity:.5;"></div>
+    <div class="hill" style="left:-8%;  bottom:-95px; width:64%; height:175px; background:#efdfc3;"></div>
+    <div class="hill" style="right:-6%; bottom:-85px; width:56%; height:145px; background:#f3e7cd;"></div>
+    <div class="mote" style="left:12%; width:4px; height:4px; animation-duration:16s; animation-delay:-3s;"></div>
+    <div class="mote" style="left:30%; width:3px; height:3px; animation-duration:21s; animation-delay:-9s;"></div>
+    <div class="mote" style="left:52%; width:5px; height:5px; animation-duration:18s; animation-delay:-14s;"></div>
+    <div class="mote" style="left:74%; width:3px; height:3px; animation-duration:23s; animation-delay:-6s;"></div>
+    <div class="mote" style="left:90%; width:4px; height:4px; animation-duration:17s; animation-delay:-11s;"></div>
+  </div>
+
+  <!-- 卷边的纸 -->
+  <div class="paper-wrap" id="paperWrap">
+    <svg class="sheet" id="paperSvg" viewBox="0 0 760 560" aria-hidden="true">
+      <defs>
+        <linearGradient id="paperGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#fefbf2"/>
+          <stop offset=".55" stop-color="#f9f2df"/>
+          <stop offset="1" stop-color="#f1e6cb"/>
+        </linearGradient>
+        <linearGradient id="curlGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#f2e8cf"/>
+          <stop offset=".55" stop-color="#ddcaa4"/>
+          <stop offset="1" stop-color="#c3ac7e"/>
+        </linearGradient>
+        <linearGradient id="curlGrad2" x1="1" y1="1" x2="0" y2="0">
+          <stop offset="0" stop-color="#eee2c4"/>
+          <stop offset="1" stop-color="#d2bf97"/>
+        </linearGradient>
+        <clipPath id="sheetClip">
+          <path d="M114 40 C 300 34, 520 34, 690 40 C 697 180, 698 360, 694 468 C 680 483, 665 500, 654 516 C 470 524, 260 524, 70 516 C 64 380, 62 200, 66 88 C 80 74, 96 57, 114 40 Z"/>
+        </clipPath>
+        <filter id="paperNoise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/></filter>
+      </defs>
+
+      <!-- 纸面：两角略作缺角，让位给折卷 -->
+      <path d="M114 40 C 300 34, 520 34, 690 40 C 697 180, 698 360, 694 468 C 680 483, 665 500, 654 516 C 470 524, 260 524, 70 516 C 64 380, 62 200, 66 88 C 80 74, 96 57, 114 40 Z"
+            fill="url(#paperGrad)"/>
+      <!-- 纸的细纹 -->
+      <g clip-path="url(#sheetClip)">
+        <rect width="760" height="560" filter="url(#paperNoise)" opacity=".05"/>
+      </g>
+      <!-- 纸缘描边 -->
+      <path d="M114 40 C 300 34, 520 34, 690 40 C 697 180, 698 360, 694 468 C 680 483, 665 500, 654 516 C 470 524, 260 524, 70 516 C 64 380, 62 200, 66 88 C 80 74, 96 57, 114 40 Z"
+            fill="none" stroke="rgba(150,120,70,.26)" stroke-width="1.4"/>
+
+      <!-- 折卷在纸面上的落影 -->
+      <path d="M694 468 C 680 483, 665 500, 654 516" stroke="rgba(120,92,50,.10)" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M694 468 C 680 483, 665 500, 654 516" stroke="rgba(120,92,50,.14)" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+      <path d="M66 88 C 80 74, 96 57, 114 40" stroke="rgba(120,92,50,.09)" stroke-width="8" fill="none" stroke-linecap="round"/>
+
+      <!-- 右下角折卷（微微翘起的纸背） -->
+      <path d="M694 468 C 681 483, 666 500, 654 516 C 674 519, 692 509, 699 494 C 702 484, 700 474, 694 468 Z"
+            fill="url(#curlGrad)"/>
+      <path d="M692 500 C 682 509, 668 514, 656 516" stroke="rgba(255,250,235,.55)" stroke-width="1.6" fill="none"/>
+      <!-- 左上角折卷 -->
+      <path d="M66 88 C 79 74, 95 56, 114 40 C 96 43, 79 51, 69 64 C 62 73, 62 81, 66 88 Z"
+            fill="url(#curlGrad2)"/>
+      <path d="M70 68 C 80 54, 96 45, 112 41" stroke="rgba(255,250,235,.5)" stroke-width="1.4" fill="none"/>
+    </svg>
+
+    <!-- 信 -->
+    <div class="intro" id="intro" aria-live="polite"></div>
+  </div>
+
+  <!-- 钢笔（若 assets/pen.png 存在会自动替换内置 SVG） -->
+  <div id="pen" aria-hidden="true">
+  <svg id="penSvg" viewBox="0 0 60 110">
+    <defs>
+      <linearGradient id="nibGrad" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#e8ebef"/>
+        <stop offset=".5" stop-color="#b9c0c9"/>
+        <stop offset="1" stop-color="#8d959f"/>
+      </linearGradient>
+      <linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#4a3b4c"/>
+        <stop offset=".45" stop-color="#241c26"/>
+        <stop offset="1" stop-color="#120d14"/>
+      </linearGradient>
+      <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#ecc87e"/>
+        <stop offset=".5" stop-color="#c9994f"/>
+        <stop offset="1" stop-color="#9a6f28"/>
+      </linearGradient>
+    </defs>
+    <!-- 笔杆 -->
+    <path d="M25.5 62 L23.5 20 C 23.5 10, 36.5 10, 36.5 20 L34.5 62 Z" fill="url(#bodyGrad)"/>
+    <!-- 笔帽顶珠与金环 -->
+    <circle cx="30" cy="11" r="4.6" fill="url(#goldGrad)"/>
+    <rect x="22.6" y="17" width="14.8" height="3.4" rx="1.6" fill="url(#goldGrad)"/>
+    <!-- 金夹 -->
+    <path d="M37.4 22 C 40.2 24, 40.6 40, 38.6 52 L 36.4 52 C 38.2 40, 37.8 27, 36 23 Z" fill="url(#goldGrad)"/>
+    <!-- 笔握 -->
+    <rect x="24" y="60" width="12" height="20" rx="5.5" fill="#2c2528"/>
+    <!-- 金箍 -->
+    <rect x="23" y="56.5" width="14" height="4.2" rx="2" fill="url(#goldGrad)"/>
+    <!-- 笔尖 -->
+    <path d="M30 106 C 23.5 98, 21.5 86, 24.5 76 L 35.5 76 C 38.5 86, 36.5 98, 30 106 Z" fill="url(#nibGrad)"/>
+    <path d="M30 103 L 30 83" stroke="#5c636c" stroke-width="1.1"/>
+    <circle cx="30" cy="85.5" r="1.7" fill="none" stroke="#5c636c" stroke-width="1"/>
+    <path d="M24.5 76 L 35.5 76 L 34.6 79 L 25.4 79 Z" fill="#8a919a"/>
+  </svg>
+  </div>
+
+  <!-- 卷好的信卷（若 assets/scroll.png 存在会自动替换内置 SVG） -->
+  <div id="scrollEl" aria-hidden="true">
+  <svg id="scrollSvg" viewBox="0 0 170 120">
+    <defs>
+      <linearGradient id="rollGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fefaf0"/>
+        <stop offset=".5" stop-color="#f5ecd8"/>
+        <stop offset="1" stop-color="#dcc9a3"/>
+      </linearGradient>
+    </defs>
+    <ellipse cx="85" cy="106" rx="64" ry="8" fill="rgba(196,150,88,.22)"/>
+    <rect x="18" y="38" width="128" height="44" rx="22" fill="url(#rollGrad)"/>
+    <path d="M36 43 C 62 39, 108 39, 132 43" stroke="rgba(170,140,90,.25)" stroke-width="1.2" fill="none"/>
+    <path d="M32 77 C 60 81, 110 81, 138 77" stroke="rgba(170,140,90,.22)" stroke-width="1.2" fill="none"/>
+    <circle cx="146" cy="60" r="21" fill="#ead9b8"/>
+    <circle cx="146" cy="60" r="21" fill="none" stroke="rgba(150,120,70,.35)" stroke-width="1.2"/>
+    <path d="M162 60 A16 16 0 1 1 146 44 A11.5 11.5 0 1 0 157.5 60 A7.5 7.5 0 1 1 146 52.5 A3.8 3.8 0 1 0 149.8 60"
+          fill="none" stroke="#b99a66" stroke-width="1.6" stroke-linecap="round"/>
+    <ellipse cx="20" cy="60" rx="9" ry="21" fill="#f6edd9" stroke="rgba(150,120,70,.3)" stroke-width="1"/>
+    <path d="M27 45 C 15 35, 7 25, 9 13 C 19 21, 29 31, 35 41 Z" fill="#faf2e0" stroke="rgba(150,120,70,.25)" stroke-width="1"/>
+  </svg>
+  </div>
+
+  <!-- 衔信卷的飞鸟（若 assets/bird.gif 存在会自动替换内置小鸟） -->
+  <div id="bird" aria-hidden="true">
+    <svg id="birdSvg" viewBox="0 0 140 90">
+      <path class="wing-far" d="M62 42 C 54 18, 34 6, 12 10 C 28 20, 46 32, 62 42 Z" fill="#4a4238"/>
+      <path d="M32 52 C 22 48, 12 42, 4 34 C 14 34, 26 38, 36 44 Z" fill="#453e33"/>
+      <path d="M32 50 C 42 36, 72 34, 92 46 C 98 50, 98 56, 91 60 C 72 70, 44 66, 32 50 Z" fill="#5c5347"/>
+      <path d="M40 58 C 54 66, 72 66, 84 58 C 74 66, 50 68, 40 58 Z" fill="#e0b34f"/>
+      <path class="wing-near" d="M64 46 C 58 22, 40 10, 18 15 C 36 26, 52 36, 64 46 Z" fill="#6d6354"/>
+      <circle cx="94" cy="46" r="9" fill="#5c5347"/>
+      <path d="M102 43 L 116 47 L 102 51 Z" fill="#e8b54f"/>
+      <circle cx="97" cy="43.5" r="1.7" fill="#241f18"/>
+      <circle cx="97.6" cy="42.9" r=".5" fill="#fff"/>
+    </svg>
+  </div>
+
+  <p class="hint" id="hint"></p>
+</div>
+
+<!-- ══════════════ 第二幕 · 气泡园子 ══════════════ -->
+<div class="scene grain" id="sceneGarden" hidden>
+  <p class="garden-line">飞鸟衔走了那页纸，也衔来了这一园子的气泡。</p>
+  <div class="petals" id="petals" aria-hidden="true"></div>
+  <div class="bubbles" id="bubbles"></div>
+
+  <button class="perch" id="perchBird" title="衔我回纸上">
+    <svg width="72" height="46" viewBox="0 0 120 80" aria-hidden="true">
+      <path d="M0 66 C 40 60, 80 62, 120 58" stroke="#b99b64" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <path d="M38 56 C 30 54, 21 49, 13 43 C 22 43, 33 46, 41 51 Z" fill="#4a4238"/>
+      <path d="M38 54 C 44 44, 62 42, 74 50 C 80 54, 80 60, 73 63 C 60 68, 45 64, 38 54 Z" fill="#5c5347"/>
+      <path d="M44 60 C 54 65, 64 65, 72 61 C 66 66, 50 66, 44 60 Z" fill="#d9a84e"/>
+      <path class="pw1" d="M46 52 C 52 45, 64 44, 71 50 C 64 56, 52 57, 46 52 Z" fill="#6d6354"/>
+      <circle cx="75" cy="50" r="7" fill="#5c5347"/>
+      <path d="M81 47.5 L 90 50.5 L 81 53.5 Z" fill="#e0b34f"/>
+      <circle cx="77.5" cy="48.4" r="1.2" fill="#241f18"/>
+    </svg>
+    <span>再写一页 · back to the paper</span>
+  </button>
+
+  <p class="garden-foot">© <span id="year">2026</span> StrayBird · 愿我们都飞在自己的风里。</p>
+</div>
+
+<!-- 展开的大气泡 -->
+<div class="stage-big" id="stageBig" role="dialog" aria-modal="true" aria-hidden="true">
+  <button class="s-chip" id="sChip" type="button" aria-label="返回当前分类"><span id="sChipEmoji"></span><b id="sChipTitle"></b></button>
+  <div class="s-head">
+    <div class="s-emoji" id="sEmoji"></div>
+    <h3 class="s-title" id="sTitle"></h3>
+    <p class="s-sub" id="sSub"></p>
+  </div>
+  <button class="s-arrow prev" id="sPrev" aria-label="上一页">‹</button>
+  <div class="s-viewport" id="sViewport"><div class="s-track" id="sTrack"></div></div>
+  <button class="s-arrow next" id="sNext" aria-label="下一页">›</button>
+  <div class="s-dots" id="sDots"></div>
+  <p class="s-hint">点气泡外的任意处，回到园子</p>
+</div>
+
+<!-- 文章阅读页：气泡缩到左上角，正文在页面中间展开 -->
+<div class="reader" id="reader" role="dialog" aria-hidden="true">
+  <button class="r-close" id="rClose" aria-label="回到气泡">✕</button>
+  <p class="s-tag" id="rTag"></p>
+  <h3 class="r-title" id="rTitle"></h3>
+  <p class="r-date" id="rDate"></p>
+  <div class="r-body" id="rBody"></div>
+</div>
+
+<noscript>
+  <div>
+    <h1>StrayBird</h1>
+    <p>一只离群的飞鸟 —— 这个页面需要 JavaScript 才能展开纸与鸟的故事。</p>
+    <p><a href="https://github.com/StrayBird-excellent">github.com/StrayBird-excellent</a></p>
+  </div>
+</noscript>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   个人资料 —— 想改内容，只动这里就够了
+   ══════════════════════════════════════════════════════════════ */
+const PROFILE = {
+  name: "StrayBird",
+  motto: "一只离群的飞鸟，飞向自己的远方",
+  born: "2004.12.12",
+  zodiac: "射手 ♐",
+  mbti: "INFJ · 提倡者",
+  school: "炊烟、田埂与天涯",
+  city: "人世间",
+  major: "计算机科学与技术",
+  loves: ["阅读", "影视", "安静的思考"],
+  techStack: ["Python", "FastAPI", "JavaScript", "Three.js", "Vite", "Blender", "Electron", "Git"], // ← 常用技术栈：可自行增删
+  reading: ["政治", "历史", "哲学", "人文社科", "文学小说"],
+  readingNow: {                      // ← 填我：手边这一本
+    title: "＿＿＿＿＿＿",
+    note: "读完，再来写一句感受。"
+  },
+  watchingNow: {                     // ← 填我：手边这一部
+    title: "＿＿＿＿＿＿",
+    note: "看完，再来写一句。"
+  },
+  listeningNow: {                    // ← 填我：单曲循环的那一首
+    title: "＿＿＿＿＿＿",
+    note: "循环到第＿＿遍。"
+  },
+  now: {                             // ← 此刻：隔段时间回来改几行就好
+    place: "＿＿＿＿",               // ← 填我：此刻落在哪个城市
+    placeLine: "风往哪吹，笔往哪走。",
+    doing: "读着计算机科学与技术，写着大观园，也写着这份小站。",
+    musing: "想做一个心里有诗、手里有码的人。"
+  },
+  links: [                           // ← 填我：你的联系方式，不用就删掉
+    { label: "GitHub", icon: "github", url: "https://github.com/StrayBird-excellent", note: "我的代码都在这里" },
+    { label: "邮箱", icon: "email", url: "mailto:3190547317@qq.com", note: "3190547317@qq.com" },
+    { label: "QQ", icon: "qq", note: "3190547317", qr: "assets/qq-qr.jpg", qrNote: "扫一扫，加我为好友" },
+    { label: "微信", icon: "wechat", note: "XYHENRYLI", qr: "assets/wechat-qr.jpg", qrNote: "扫码添加微信" }
+  ],
+  thoughts: [                        // ← 手记：一篇 = { tag, title, date, body: [段1, 段2, ...] }
+    { tag: "关于名字", title: "离群，是为了自己的航线", date: "2026 · 夏",
+      body: [
+        "集子里的鸟会回到窗前唱歌，而我想飞向比远方更远一点的天。",
+        "哪怕离群，也要飞自己的轨迹、自己的诗——这个名字存着一个朴素的愿望。",
+        "所以有了这个小小的站：一张纸、一支笔、一只鸟，和一个还在路上的我。"
+      ] },
+    { tag: "关于日常", title: "书与键盘之间", date: "2026 · 秋",
+      body: [
+        "白天写着代码，夜里读泰戈尔与哲学，反差感，确实拉满。",
+        "但慢慢发现，写好一段程序和写好一句诗是同一件事：都要诚实，都要克制，都要在心里留着留白。"
+      ] },
+    { tag: "未完待续", title: "这一页，暂时留白", date: "",
+      body: [ "等一个故事，走进来。" ] }
+  ],
+  projects: [
+    {
+      emoji: "🏮", tag: "长期项目",
+      title: "大观园 · 红楼梦交互视觉书", short: "大观园",
+      desc: "一部可游逛、可检索、可分支阅读的《红楼梦》：120 回全文、2,755 段稳定锚点、视觉书、3D 大观园与视觉小说，共用一套叙事索引。",
+      detail: [                     // ← 点标题后展开的详细内容，一段一根段落
+        "这是我最偏心的一个长期项目：不是把《红楼梦》搬上屏幕，而是把人物、器物、场景与原文拆开，再重新织成一座可以走进去的园子。",
+        "项目本地收录 120 回、约 85 万字正文，并为 2,755 段建立稳定锚点。全文阅读器按需加载，支持简繁字对照检索；从“葬花”这样的词，可以直接回到相应的回目与段落。",
+        "视觉书梳理了 13 幕关键情节；视觉小说有双视角、分支与分章存档。40 位人物与 92 条双向关系，让故事、人物、器物和原文之间可以彼此跳转，而不是只沿着一条线翻页。",
+        "大观园以 Three.js 驱动 WebGL 场景，通过 Raycaster 拾取地点；六个核心地点中，三座院落由 Blender 生成的 PBR GLB 资产异步加载。Three.js、图标库与全文阅读模块分包，园林在空闲时加载，把首屏优先留给故事本身。",
+        "视觉书与视觉小说的进度、章节存档和音频开关会保存在 localStorage；氛围声则用 Web Audio API 控制，让阅读不只停留在文字层面。"
+      ],
+      screenshots: [
+        { src: "assets/honglou-visual-book.png", alt: "红楼梦视觉书实拍：左侧章节索引，中间插画，右侧情节、人物与物件注释。", caption: "视觉书 · 情节、人物与物件互读" },
+        { src: "assets/honglou-3d-garden.png", alt: "红楼梦交互视觉书的三维大观园实拍，展示地点导航与园林总览。", caption: "3D 大观园 · 六个可探索核心地点" },
+        { src: "assets/honglou-corpus-search.png", alt: "红楼梦 120 回全文检索实拍，搜索葬花后显示段落结果。", caption: "全文阅读器 · 120 回、2,755 段稳定锚点" }
+      ],
+      link: null, chips: ["JavaScript", "Vite", "Three.js", "Blender", "GLB / PBR", "Web Audio API"]
+    },
+    {
+      emoji: "🩺", tag: "在线项目",
+      title: "乳腺癌 AI 预测平台", short: "BC Detect",
+      desc: "上传乳腺超声影像，由 AI Agent 流式生成结构化解读（思考链可视化），支持随机森林良性/恶性预测、随访建议整理；注册登录、预付充值、全程可审计。",
+      detail: [
+        "这是一个真正跑在公网上的完整 Web 应用：用户注册登录后上传乳腺超声影像，AI Agent 会流式生成结构化解读，把思考过程可视化地摊开给用户看，而不是给一个黑箱结论。",
+        "预测侧使用随机森林模型输出良性/恶性判别，并给出随访建议整理；系统还带有病例管理、预付充值钱包与管理后台，关键操作全程留痕可审计。",
+        "平台经 Cloudflare 隧道部署在我的电脑上，开机期间可在线访问体验；仅作学习演示用途，不构成任何医疗建议。"
+      ],
+      screenshots: [
+        { src: "assets/bc-benign.png", alt: "平台样例：左侧乳腺良性超声影像，腺体层内见边界清晰的小无回声区。", caption: "样例影像 · 良性超声（平台可上传预测）" },
+        { src: "assets/bc-malignant.png", alt: "平台样例：恶性超声影像，病灶边界不清、形态不规则，供 AI 解读与预测演示。", caption: "样例影像 · 恶性超声（平台可上传预测）" }
+      ],
+      link: "https://bc.straybird.ccwu.cc/", chips: ["Flask", "DeepSeek Agent", "MCP 工具", "随机森林", "流式输出", "SQLite"]
+    },
+    {
+      emoji: "🤖", tag: "数字生命",
+      title: "RealLife · 住在 QQ 里的数字生命", short: "RealLife",
+      desc: "一个接入 QQ 的持久化数字生命运行时：事件、身份状态、分层记忆与可靠回复都走可审计的服务端链路，而不是把聊天记录塞进提示词。",
+      detail: [
+        "小未住在 QQ 里，跨重启保留名字、状态、关系和记忆；但它不是被包装成“有意识”的 AI，而是一个持续身份与安全边界都可被查看的数字生命实验。",
+        "每条 QQ 消息会先持久化，再用 dedup_key 去重。调度器让同一会话按因果顺序逐条处理，不同会话可以并行；最终回复先进入持久 Outbox，再按顺序投递给 QQ。",
+        "模型不能随意决定“回谁、做什么”：服务端先生成并持有 ActionPlan，把回复目标绑定到当前可信事件与说话者。未知工具或越过参数白名单的请求一律 fail-closed，避免模型越过边界。",
+        "记忆分为 episodic、semantic、person_profile、preference 与 procedure 五层，带有 scope、authority 与生命周期。检索先经过权限与范围过滤，再做词法或本地语义排序；语义排序失败时会精确回退为本地结果。",
+        "项目用 FastAPI + SQLAlchemy Async + SQLite 起步，通过 NapCat / OneBot 11 接入 QQ；模型层支持 OpenAI-compatible 多模态输入，控制台提供感知、任务、Outbox、记忆与成长的审计入口。"
+      ],
+      screenshots: [
+        { src: "assets/reallife-admin.png", alt: "RealLife 生命控制台实拍，展示本地控制台与管理员令牌连接入口。", caption: "生命控制台 · 本地审计入口", layout: "wide" },
+        { src: "assets/reallife-qq-care.jpg", alt: "QQ 手机聊天界面，蓝白气泡围绕晚归、地铁与晚餐展开关怀对话，穿插猫咪表情。", caption: "真实对话效果 · 夜归路上的一句关心", layout: "portrait" },
+        { src: "assets/reallife-qq-literature.jpg", alt: "QQ 手机聊天界面，蓝白气泡围绕夏目漱石《心》、友情与信任展开阅读讨论。", caption: "真实对话效果 · 从《心》谈到信任", layout: "portrait" }
+      ],
+      link: "https://github.com/StrayBird-excellent/RealLife-XiaoWei", chips: ["Python", "FastAPI", "SQLAlchemy", "SQLite", "NapCat / OneBot", "OpenAI-compatible"]
+    },
+    {
+      emoji: "🦈", tag: "桌面应用",
+      title: "dsh-desktop · 桌面版 DeepSeek Harness", short: "dsh-desktop",
+      desc: "官方桌面版到来前做的一个跨平台过渡封装（狗头）：把 DeepSeek Harness 收进 Windows 与 macOS 应用，下载后即可直接使用。",
+      detail: [
+        "这是在官方桌面版出现前做的个人过渡方案（狗头）。它不打算长期替代官方仓库，而是想让当时需要 DeepSeek Harness 的人能下载、解压、双击，先把事情做起来。",
+        "Electron 主进程会在 127.0.0.1 自动寻找可用端口，用内置 Node 启动 dsh web，并轮询等待服务就绪；启动失败有有限重试，窗口真正打开前不把半成品界面交给用户。",
+        "桌面版使用独立 DSH_HOME，避免与网页版共用 API Key、会话和缓存。为了让 Windows 的 COM 文件夹选择器正常工作，启动侧还刻意使用真正的 Node，而不是 Electron 自带的 Node 环境。",
+        "窗口启用 contextIsolation、关闭 nodeIntegration 与 sandbox；外部链接交给系统浏览器打开。应用支持单实例、托盘隐藏与恢复，退出时会清理子进程树。",
+        "发布物同时覆盖 Windows x64 的 NSIS 安装包与便携版，以及 macOS Intel / Apple Silicon 两种构建；macOS 包目前未签名，因此更适合作为当时的过渡使用。"
+      ],
+      screenshots: [
+        { src: "assets/dsh-desktop-main.png", alt: "DeepSeek Harness 深色桌面界面：左侧工作区与会话列表，中央为“探索未至之境”的新会话输入区。", caption: "DeepSeek Harness 桌面端 · 工作区、会话与模型入口集中在一处", layout: "wide" }
+      ],
+      link: "https://github.com/StrayBird-excellent/dsh-desktop", chips: ["Electron", "Node.js", "DeepSeek Harness", "electron-builder", "Sharp", "Windows + macOS"]
+    },
+    {
+      emoji: "⚖️", tag: "劳动权益",
+      title: "PeopleValue · 劳动智援", short: "PeopleValue",
+      desc: "把劳动仲裁里“说不清、算不准、不会写”的步骤，拆成引导式评估、赔偿测算、文书生成与流程导航。",
+      detail: [
+        "劳动争议里最难的往往不是“有没有道理”，而是不知道从哪里说起、证据够不够、赔偿该怎么算。劳动智援想把这些容易卡住的步骤拆开，让维权先有一条能走的路。",
+        "案件评估用四步收集个人、用工、争议和证据信息；服务端可通过 LangChain 调用 DeepSeek 的 OpenAI-compatible 接口，按结构化 JSON 返回胜诉概率、赔偿项、风险、建议与法条依据。",
+        "模型不可用时，评估不会直接失效：本地规则会按证据加权计算概率，并对拖欠工资、工作年限、违法解除与未签合同等情况生成可解释的赔偿项。",
+        "文书模块可以生成劳动仲裁申请书与证据清单，并通过 jsPDF 导出；法律知识引擎内置劳动法、劳动合同法与劳动争议调解仲裁法等条目，用关键词和场景评分返回相关依据。",
+        "前端用 React + TypeScript 做成清晰的引导流程，后端以 Express、JWT、bcrypt 和 MongoDB/Mongoose 组织账号与案件归属；它更像一套帮助劳动者整理问题的工具，而不是替代专业法律意见。"
+      ],
+      screenshots: [
+        { src: "assets/peoplevalue-home.png", alt: "劳动智援首页实拍，深蓝与金色视觉，中央写有“让每一次维权都有据可依”。", caption: "产品首页 · 让每一次维权都有据可依", layout: "wide" },
+        { src: "assets/peoplevalue-assessment.png", alt: "劳动智援案件评估页面实拍，展示个人信息、用工情况、争议事项与证据情况四步流程。", caption: "案件评估 · 四步梳理劳动争议", layout: "wide" },
+        { src: "assets/peoplevalue-process.png", alt: "劳动智援劳动仲裁流程导航实拍，展示申请立案、受理审查、开庭审理、仲裁裁决和申请执行。", caption: "流程导航 · 从申请立案到申请执行", layout: "wide" }
+      ],
+      link: "https://github.com/StrayBird-excellent/PeopleRight", chips: ["React", "TypeScript", "Vite", "Tailwind CSS", "Express", "MongoDB", "LangChain", "jsPDF"]
+    },
+    {
+      emoji: "🧠", tag: "本地部署",
+      title: "Qwen3.8-27B · 本地量化推理", short: "Qwen3.8",
+      desc: "把 Qwen3.8-27B 原生视觉语言模型部署到本机：在 NVFP4 与 Q4 两套 GGUF 量化之间取舍，并围绕 GPU offload、KV Cache、上下文长度和思考模式做推理调优。",
+      detail: [
+        "这不是重新训练或模型剪枝，而是一次以实测为准的本地量化推理调优：先在模型体积、速度和视觉能力之间，找到这台机器跑得稳的平衡。",
+        "默认使用约 15.25 GiB 的 NVFP4 GGUF，另保留约 17.67 GiB 的 Q4_K_M 备选；推理侧配置 52 层 GPU offload、12 线程、Flash Attention、65,536 token 上下文与 Q4_0 KV Cache。",
+        "MTP 草稿解码也实际试过，但草稿层在这台机器上落到 CPU、收益为负，所以默认关闭。这比“什么都打开”更像一次诚实的调优。",
+        "服务仅监听本机 127.0.0.1:7860，提供 OpenAI-compatible 流式接口；保留 BF16 多模态投影支持图片理解，并可按请求开启思考、调节 reasoning_effort 和保留多轮推理痕迹。"
+      ],
+      link: null, chips: ["Qwen3.8-27B", "llama.cpp", "GGUF / NVFP4", "CUDA", "Flash Attention", "OpenAI-compatible API"]
+    },
+    {
+      emoji: "🕯️", tag: "研究系统",
+      title: "God, Please · 仪式对话研究模拟", short: "God, Please",
+      desc: "把忏悔从“回答问题”变成可研究的对话结构：三类仪式流程、受约束的本地 LLM 与可回看的语言数据。",
+      detail: [
+        "它为社会学、宗教学、人类学与语言学研究而设，不冒充宗教服务。天主教、新教与佛教三类仪式被拆成可配置的状态化对话流程，开场和固定轮次都会重申“仅学术模拟”的边界。",
+        "后端将会话、匿名参与者、项目、实验、标注与人工审核连成一条研究数据链路；本地 Ollama 通过异步 HTTPX 调用，另保留 OpenAI 与 Anthropic 适配层。",
+        "输出经过多层规则：高危关键词直接拦截，宗教身份、绝对化或命令式表达进入人工审核。每段对话还有 UUID、上下文和最大轮次限制。",
+        "每条消息都会标注主题、情感、互动模式与文本特征；前端可按项目、实验与时间筛选，用图表呈现，并导出 JSON、CSV 或 XLSX。"
+      ],
+      link: null, chips: ["FastAPI", "React", "Ollama", "SQLAlchemy", "Chart.js", "研究数据分析"]
+    },
+    {
+      emoji: "🌍", tag: "网页设计",
+      title: "TERRA · 3D 世界探索网页设计", short: "TERRA",
+      desc: "以可旋转的 3D 地球替代静态主视觉，把国家资料、文化信息与设计系统织进同一段探索旅程。",
+      detail: [
+        "以深海蓝渐变、玻璃质感导航和发光地球构成首屏；地球支持拖拽、缩放和自动旋转，让“探索世界”不只是一个静态 KV。",
+        "首屏与探索区分别初始化独立的 Three.js 场景：128 段球体、环境/方向/点光、1000 颗 BufferGeometry 星空，以及带阻尼的 OrbitControls。纹理有主地址与两级回退，失败也会保留材质球体。",
+        "页面内置 18 份静态国家资料。点击地图后，Overview、Culture、Features 与 Data 四个标签、统计字段和国家卡片同步更新；缩放、加载与点击都有明确反馈。",
+        "除视觉外也补了交互的收尾：IntersectionObserver 负责滚动入场，1200/768/480 三档响应式布局，焦点样式、ARIA 语义与 prefers-reduced-motion 都有照顾。"
+      ],
+      screenshots: [
+        { src: "assets/earthweb-hero.png", alt: "TERRA 网页设计首屏实拍，左侧是世界探索文案，右侧是发光的三维地球与星空。", caption: "首屏 · 以可旋转的 3D 地球取代静态主视觉", layout: "wide" },
+        { src: "assets/earthweb-explore.png", alt: "TERRA 探索区域实拍，左侧为带缩放控件的三维地球，右侧为法国资料卡与选项标签。", caption: "探索页 · 地图、缩放与国家资料卡同步呈现", layout: "wide" }
+      ],
+      link: null, chips: ["HTML5", "CSS3", "JavaScript", "Three.js", "WebGL", "OrbitControls", "响应式设计"]
+    }
+  ]
+};
+
+/* 信 · 意大利式斜体英文；每次打开换一则《飞鸟集》 */
+const STRAY_BIRDS_QUOTES = [
+  "O troupe of little vagrants of the world, leave your footprints in my words.",
+  "If you shed tears when you miss the sun, you also miss the stars.",
+  "What you are you do not see, what you see is your shadow.",
+  "I cannot choose the best. The best chooses me.",
+  "The bird wishes it were a cloud. The cloud wishes it were a bird.",
+  "Let life be beautiful like summer flowers and death like autumn leaves.",
+  "The world has kissed my soul with its pain, asking for its return in songs.",
+  "The stars are not afraid to appear like fireflies."
+];
+let lastStrayBirdsQuote = "";
+function pickStrayBirdsQuote() {
+  try { lastStrayBirdsQuote = localStorage.getItem("strayBirdsQuote") || lastStrayBirdsQuote; } catch {}
+  const choices = STRAY_BIRDS_QUOTES.filter(quote => quote !== lastStrayBirdsQuote);
+  const quote = choices[Math.floor(Math.random() * choices.length)] || STRAY_BIRDS_QUOTES[0];
+  lastStrayBirdsQuote = quote;
+  try { localStorage.setItem("strayBirdsQuote", quote); } catch {}
+  return quote;
+}
+const INTRO = [
+  { cls: "quote", text: "" },
+  { cls: "",      text: "I am StrayBird — one such vagrant. I sang once in Tagore’s little book, then flew off the page; now I live between books and keyboards, poetry and code." },
+  { cls: "sign",  text: "— hello, wanderer. Rest a while in my corner of the wind." }
+];
+
+const $ = (s, el) => (el || document).querySelector(s);
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const FINE = matchMedia("(pointer: fine)").matches;
+
+const scene1 = $("#scenePaper"), paperWrap = $("#paperWrap"),
+      introEl = $("#intro"), hintEl = $("#hint"), pen = $("#pen"), bird = $("#bird"),
+      birdSvg = $("#birdSvg"), paperSvg = $("#paperSvg"), penSvg = $("#penSvg"), scrollSvg = $("#scrollSvg"),
+      scrollEl = $("#scrollEl"),
+      scene2 = $("#sceneGarden"), bubblesEl = $("#bubbles"), petalsEl = $("#petals"),
+      stageBig = $("#stageBig"), sTrack = $("#sTrack"), sDots = $("#sDots"), sViewport = $("#sViewport"),
+      perch = $("#perchBird");
+
+/* 你自己生成的小鸟，三级回退：
+   assets/bird-sprite.png（横排序列帧，自动扇翅）→ assets/bird.png（单张）→ 内置 SVG */
+const SPRITE_N = 6;
+let BEAK = { x: 108, y: 44 };            // 喙尖在鸟元素内的位置（SVG 模式）
+(function () {
+  const spr = new Image();
+  spr.onload = () => {
+    const DH = 112, DW = Math.round(spr.naturalWidth / SPRITE_N / spr.naturalHeight * DH);
+    bird.style.width = DW + "px";
+    bird.style.height = DH + "px";
+    bird.style.backgroundImage = "url(assets/bird-sprite.png)";
+    bird.style.backgroundSize = (DW * SPRITE_N) + "px " + DH + "px";
+    bird.style.backgroundRepeat = "no-repeat";
+    birdSvg.style.display = "none";
+    BEAK = { x: DW * .80, y: DH * .42 };         // 生成图里喙尖/信卷的位置
+    if (RM) { bird.style.backgroundPosition = "0 0"; return; }
+    let fi = 0;
+    setInterval(() => { fi = (fi + 1) % SPRITE_N; bird.style.backgroundPosition = (-fi * DW) + "px 0"; }, 110);
+  };
+  spr.onerror = () => {
+    const single = new Image();
+    single.className = "bird-img"; single.alt = "";
+    single.onload = () => {
+      birdSvg.style.display = "none";
+      bird.insertBefore(single, birdSvg);
+      BEAK = { x: 130 * .78, y: 87 * .44 };
+    };
+    single.onerror = () => single.remove();
+    single.src = "assets/bird.png";
+  };
+  spr.src = "assets/bird-sprite.png";
+})();
+
+/* 你的信纸：assets/paper.png 会替换内置 SVG 信纸 */
+(function () {
+  const p = new Image();
+  p.className = "paper-img"; p.alt = ""; p.hidden = true;
+  p.onload = () => { paperSvg.style.display = "none"; p.hidden = false; paperWrap.appendChild(p); };
+  p.onerror = () => p.remove();
+  p.src = "assets/paper.png";
+})();
+
+/* 你的信卷：assets/scroll.png 会替换内置 SVG 信卷 */
+(function () {
+  const p = new Image();
+  p.className = "scroll-img"; p.alt = ""; p.hidden = true;
+  p.onload = () => { scrollSvg.style.display = "none"; p.hidden = false; scrollEl.insertBefore(p, scrollSvg); };
+  p.onerror = () => p.remove();
+  p.src = "assets/scroll.png";
+})();
+
+/* 你的背景：assets/bg.png（或 bg.jpg）替换晨曦渐变；气泡园会蒙一层浅纱保证文字可读 */
+(function () {
+  const apply = url => {
+    scene1.classList.add("has-bg");
+    scene1.style.backgroundImage = `url("${url}")`;
+    scene1.style.backgroundSize = "cover";
+    scene1.style.backgroundPosition = "center";
+    scene2.style.backgroundImage = `linear-gradient(rgba(250, 243, 230, .8), rgba(247, 240, 224, .88)), url("${url}")`;
+    scene2.style.backgroundSize = "cover";
+    scene2.style.backgroundPosition = "center";
+  };
+  const jpg = new Image();
+  jpg.onload = () => apply("assets/bg.jpg");
+  jpg.onerror = () => jpg.remove();
+  const png = new Image();
+  png.onload = () => apply("assets/bg.png");
+  png.onerror = () => { png.remove(); jpg.src = "assets/bg.jpg"; };
+  png.src = "assets/bg.png";
+})();
+
+/* 你的钢笔：assets/pen.png 会替换内置 SVG 钢笔；笔尖对齐点可用 PEN_TIP_FRAC 微调 */
+const PEN_TIP_FRAC = { x: .013, y: .996 };      // 生成图里"笔尖尖端"所在的比例位置（已按图实测）
+let penImgMode = false;
+(function () {
+  const p = new Image();
+  p.className = "pen-img"; p.alt = "";
+  p.onload = () => {
+    penImgMode = true;
+    penSvg.style.display = "none";
+    pen.insertBefore(p, penSvg);
+    applyPenSize(p);
+    syncPenTip();
+  };
+  p.onerror = () => p.remove();
+  p.src = "assets/pen.png";
+})();
+function applyPenSize(img) {
+  const H = penSmallMq.matches ? 132 : 176;
+  const W = Math.round(img.naturalWidth / img.naturalHeight * H);
+  pen.style.width = W + "px";
+  pen.style.height = H + "px";
+}
+
+if (FINE && !RM) scene1.classList.add("live");
+
+/* ---------- 提示语 ---------- */
+const HINT_0 = '钢笔会跟着你的鼠标散步 · <em>点一下纸，读一封信</em>';
+const HINT_1 = '信写好了 · <em>点一下，让飞鸟带它去下一站</em>';
+function setHint(html, pulse) {
+  if (!html) { hintEl.classList.remove("show", "pulse"); return; }
+  hintEl.innerHTML = html;
+  hintEl.classList.add("show");
+  hintEl.classList.toggle("pulse", !!pulse);
+}
+
+/* ---------- 钢笔跟随（笔尖 = 鼠标位置） ---------- */
+const penSmallMq = matchMedia("(max-width: 720px)");
+let PEN_TIP = penSmallMq.matches ? { x: 32, y: 113 } : { x: 42, y: 148 };
+let PEN_ANGLE = 46;
+function syncPenTip() {
+  if (penImgMode) {
+    const W = parseFloat(pen.style.width) || 106, H = parseFloat(pen.style.height) || 176;
+    PEN_TIP = { x: PEN_TIP_FRAC.x * W, y: PEN_TIP_FRAC.y * H };
+    PEN_ANGLE = 31;                              // 生成图的倾角
+  } else {
+    PEN_TIP = penSmallMq.matches ? { x: 32, y: 113 } : { x: 42, y: 148 };
+    PEN_ANGLE = 46;
+  }
+  pen.style.transformOrigin = PEN_TIP.x.toFixed(1) + "px " + PEN_TIP.y.toFixed(1) + "px";
+}
+penSmallMq.addEventListener?.("change", () => {
+  const img = pen.querySelector("img");
+  if (penImgMode && img) applyPenSize(img);
+  syncPenTip();
+});
+const penPos = { x: innerWidth / 2, y: innerHeight / 2 };
+let penTarget = { ...penPos };
+let lastPX = penPos.x, penVel = 0;
+function penFrame() {
+  const follow = writing ? .22 : .4;
+  penPos.x += (penTarget.x - penPos.x) * follow;
+  penPos.y += (penTarget.y - penPos.y) * follow;
+  penVel = penVel * 0.8 + (penPos.x - lastPX) * 0.2;
+  lastPX = penPos.x;
+  const tilt = Math.max(-14, Math.min(14, -penVel * 1.4));
+  pen.style.transform = `translate(${penPos.x - PEN_TIP.x}px, ${penPos.y - PEN_TIP.y}px) rotate(${PEN_ANGLE + tilt}deg)`;
+  requestAnimationFrame(penFrame);
+}
+if (!RM) requestAnimationFrame(penFrame);
+else pen.style.transform = `translate(${penPos.x - PEN_TIP.x}px, ${penPos.y - PEN_TIP.y}px) rotate(${PEN_ANGLE}deg)`;
+
+/* ---------- 钢笔只跟着散步，不留墨 ---------- */
+function onMove(e) {
+  if (!scene1.isConnected || scene1.hidden) return;
+  if (phase !== 0 || flying) return;   // 进入写信阶段后，钢笔只听信的指挥
+  penTarget = { x: e.clientX, y: e.clientY };
+}
+addEventListener("pointermove", onMove, { passive: true });
+
+/* ---------- 信的书写 ---------- */
+let phase = 0;             // 0 划墨 → 1 写信/读信 → 2 飞鸟
+let writing = false, introDone = false, flying = false;
+let revealTimers = [];
+let autoFly = null;
+
+function buildIntro() {
+  INTRO[0].text = pickStrayBirdsQuote();
+  introEl.innerHTML = "";
+  INTRO.forEach(seg => {
+    const p = document.createElement("p");
+    p.className = "wline " + seg.cls;
+    for (const ch of seg.text) {
+      const s = document.createElement("span");
+      s.className = "ch";
+      s.textContent = ch;
+      p.appendChild(s);
+    }
+    introEl.appendChild(p);
+  });
+}
+buildIntro();
+
+function startIntro() {
+  if (phase !== 0 || writing) return;
+  phase = 1; writing = true;
+  setHint("");
+  introEl.classList.add("writing");
+  const spans = introEl.querySelectorAll(".ch");
+  revealTimers.forEach(clearTimeout); revealTimers = [];
+  let t = 220, curPara = null, lastTop = -Infinity;
+  spans.forEach(s => {
+    const para = s.parentElement;
+    const r = s.getBoundingClientRect();
+    if (para !== curPara) {
+      t += curPara ? 520 : 140;
+      curPara = para; lastTop = -Infinity;
+      // 先抬笔移动到下一段起笔处，再落笔显字。
+      revealTimers.push(setTimeout(() => {
+        penTarget = { x: r.left + r.width / 2, y: r.bottom - 16 };
+      }, Math.max(0, t - 120)));
+    } else if (r.top > lastTop + 2) {
+      // 自动换行也像真实书写一样，留一点抬笔换行的空当。
+      t += 170;
+      revealTimers.push(setTimeout(() => {
+        penTarget = { x: r.left + r.width / 2, y: r.bottom - 16 };
+      }, t - 120));
+    }
+    const char = s.textContent, at = t;
+    revealTimers.push(setTimeout(() => {
+      s.classList.add("on");
+      if (!/\s/.test(char)) penTarget = { x: r.left + r.width / 2, y: r.bottom - 2 };
+    }, at));
+    const step = para.classList.contains("quote") ? 40 : 26;
+    t += step + (/[,.;:!?，。；：！？]/.test(char) ? 140 : /\s/.test(char) ? 22 : 0);
+    lastTop = r.top;
+  });
+  revealTimers.push(setTimeout(finishIntro, t + 400));
+}
+function skipIntro() {
+  revealTimers.forEach(clearTimeout);
+  introEl.querySelectorAll(".ch").forEach(s => s.classList.add("on"));
+  finishIntro();
+}
+function finishIntro() {
+  if (!writing) return;
+  writing = false; introDone = true;
+  introEl.classList.remove("writing");
+  const r = paperWrap.getBoundingClientRect();
+  penTarget = { x: r.right - 34, y: r.bottom - 24 };   // 钢笔搁笔
+  if (RM) { crossToGarden(); return; }
+  setHint(HINT_1, true);
+  autoFly = setTimeout(launchJourney, 5600);            // 读信后，飞鸟自己也会来
+}
+
+/* ---------- 飞鸟衔纸 ---------- */
+function tween(dur, step, done) {
+  const t0 = performance.now();
+  (function f(now) {
+    const t = Math.min(1, (now - t0) / dur);
+    step(t);
+    if (t < 1) requestAnimationFrame(f); else done && done();
+  })(performance.now());
+}
+const easeIO = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+function cubic(a, b, c, d, t) {
+  const u = 1 - t;
+  return {
+    x: u*u*u*a.x + 3*u*u*t*b.x + 3*u*t*t*c.x + t*t*t*d.x,
+    y: u*u*u*a.y + 3*u*u*t*b.y + 3*u*t*t*c.y + t*t*t*d.y
+  };
+}
+
+/* ---------- 信自己卷成一卷，飞鸟衔它去下一站 ---------- */
+function launchJourney() {
+  if (flying) return;
+  flying = true;
+  clearTimeout(autoFly);
+  setHint("");
+  pen.classList.add("off");
+
+  // ① 信迹淡去，纸页轻轻立起，卷成一卷
+  introEl.classList.add("fade");
+  setTimeout(() => paperWrap.classList.add("rolling"), 380);
+  setTimeout(() => scrollEl.classList.add("in", "idle"), 950);
+
+  // ② 鸟沿着晨光飞过来
+  setTimeout(birdArrive, 1150);
+}
+
+function birdArrive() {
+  if (RM) { crossToGarden(); return; }
+  const sr = scrollEl.getBoundingClientRect();
+  const SC = { x: sr.left + sr.width / 2, y: sr.top + sr.height / 2 };
+  const A = { x: SC.x - BEAK.x - 26, y: SC.y - BEAK.y - 2 };   // 鸟嘴里画好的信卷正好盖住桌上的信卷
+  const S = { x: -150, y: innerHeight * .30 };
+  const C1 = { x: innerWidth * .34, y: innerHeight * .04 };
+  const C2 = { x: A.x - 210, y: A.y - 150 };
+  bird.classList.add("show");
+  let prev = { ...S };
+
+  tween(1750, t => {
+    const pos = cubic(S, C1, C2, A, easeIO(t));
+    const ang = Math.atan2(pos.y - prev.y, pos.x - prev.x) * 0.4;
+    prev = { ...pos };
+    const bob = Math.sin(performance.now() / 90) * 3 * (1 - t);
+    bird.style.transform = `translate(${pos.x}px, ${pos.y + bob}px) rotate(${ang}deg)`;
+  }, () => {
+    // ③ 桌上的信卷被鸟接走（它嘴里已经叼着了）
+    scrollEl.classList.remove("idle");
+    scrollEl.classList.add("taken");
+    spawnFeathers({ x: SC.x + 64, y: SC.y - 8 });
+    setTimeout(flyAway, 460);
+  });
+
+  function flyAway() {
+    const E = { x: innerWidth + 260, y: -180 };
+    const C3 = { x: A.x + 340, y: A.y - 310 };
+    let prev2 = { ...A };
+    tween(2300, t => {
+      const pos = cubic(A, C3, C3, E, t);
+      const ang = Math.atan2(pos.y - prev2.y, pos.x - prev2.x) * 0.5;
+      prev2 = { ...pos };
+      const bob = Math.sin(performance.now() / 80) * 4 * (1 - t * .6);
+      bird.style.transform = `translate(${pos.x}px, ${pos.y + bob}px) rotate(${ang}deg)`;
+      if (t > .32 && !scene1.classList.contains("gone")) crossToGarden();
+    });
+  }
+}
+
+function crossToGarden() {
+  scene1.classList.add("gone");
+  setTimeout(() => { scene1.hidden = true; enterGarden(); }, 650);
+}
+
+function spawnFeathers(g) {
+  for (let i = 0; i < 5; i++) {
+    const f = document.createElement("div");
+    f.className = "feather";
+    f.style.left = g.x + "px"; f.style.top = g.y + "px";
+    f.style.setProperty("--dx", (Math.random() * 160 - 90).toFixed(0) + "px");
+    f.style.setProperty("--dy", (150 + Math.random() * 140).toFixed(0) + "px");
+    f.style.setProperty("--rot", (Math.random() * 340 - 170).toFixed(0) + "deg");
+    f.style.setProperty("--dur", (1.7 + Math.random() * 1.2).toFixed(2) + "s");
+    f.innerHTML = '<svg width="13" height="28" viewBox="0 0 14 30"><path d="M7 1 C 12 8, 12 20, 7 29 C 2 20, 2 8, 7 1 Z" fill="#d9a84e" opacity=".85"/><path d="M7 3 L 7 27" stroke="#b8860b" stroke-width=".8" opacity=".6"/></svg>';
+    f.addEventListener("animationend", () => f.remove());
+    scene1.appendChild(f);
+  }
+}
+
+/* ---------- 点击纸面 ---------- */
+const bootT = performance.now();
+scene1.addEventListener("click", () => {
+  if (flying || performance.now() - bootT < 700) return;   // 刚加载时的误触不算
+  if (phase === 0) startIntro();
+  else if (writing) skipIntro();
+  else if (introDone) launchJourney();
+});
+scene1.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); scene1.click(); }
+});
+scene1.tabIndex = 0;
+
+/* ============================================================
+   第二幕 · 气泡
+   ============================================================ */
+const BUBBLES = [
+  { key: "about",    x: 50, y: 44, sz: 172, d: 0 },
+  { key: "thoughts", x: 19, y: 21, sz: 146, d: .07 },
+  { key: "books",    x: 81, y: 20, sz: 146, d: .14 },
+  { key: "projects", x: 50, y: 81, sz: 158, d: .21 },
+  { key: "now",      x: 12, y: 58, sz: 128, d: .28 },
+  { key: "findme",   x: 88, y: 57, sz: 128, d: .35 },
+  { key: "deco1", x: 30, y: 64, sz: 46, d: .42, deco: true },
+  { key: "deco2", x: 70, y: 65, sz: 42, d: .49, deco: true },
+  { key: "deco3", x: 34, y: 10, sz: 40, d: .56, deco: true }
+];
+
+const CATEGORIES = {
+  about:    { emoji: "🕊️", title: "关于我",   value: "一只离群的飞鸟", sub: "About me" },
+  thoughts: { emoji: "🪶", title: "手记",     value: "一些路上的念头", sub: "Notes" },
+  books:    { emoji: "☕", title: "手边",     value: "书 · 影 · 歌", sub: "At hand" },
+  projects: { emoji: "🛠️", title: "个人项目", value: "亲手搭的小东西", sub: "Projects" },
+  now:      { emoji: "🧭", title: "此刻",     value: "风往哪吹", sub: "Now" },
+  findme:   { emoji: "📮", title: "找到我",   value: "穿过风来找我", sub: "Find me" }
+};
+
+function bubbleHTML(b) {
+  const style = `style="--x:${b.x}%;--y:${b.y}%;${b.sz ? `--sz:${b.sz}px;` : ""}--d:${b.d}s;--bd:${(5.5 + Math.random() * 3).toFixed(1)}s;--bdel:-${(Math.random() * 5).toFixed(1)}s"`;
+  if (b.deco) return `<span class="bubble deco" ${style} aria-hidden="true"></span>`;
+  const m = CATEGORIES[b.key];
+  return `<button class="bubble${b.key === "about" ? " center" : ""}" ${style} data-k="${b.key}" aria-label="${m.title}">
+      <span class="b-emoji">${m.emoji}</span>
+      <span class="b-title">${m.title}</span>
+      <span class="b-value">${m.value}</span>
+      <span class="b-sub">${m.sub}</span>
+    </button>`;
+}
+
+/* 轻量原生樱花：只在园子里飘落，不遮挡也不拦截点击。 */
+const petalFragment = document.createDocumentFragment();
+for (let i = 0; i < 18; i++) {
+  const petal = document.createElement("span");
+  petal.className = "petal";
+  petal.style.cssText =
+    `--x:${(Math.random() * 100).toFixed(1)}%;--s:${(11 + Math.random() * 11).toFixed(1)}px;` +
+    `--dur:${(10 + Math.random() * 8).toFixed(1)}s;--delay:-${(Math.random() * 18).toFixed(1)}s;` +
+    `--drift:${(-18 + Math.random() * 36).toFixed(1)}vw;--turn:${(360 + Math.random() * 720).toFixed(0)}deg;`;
+  petalFragment.appendChild(petal);
+}
+petalsEl.appendChild(petalFragment);
+
+bubblesEl.innerHTML = BUBBLES.map(bubbleHTML).join("");
+bubblesEl.addEventListener("click", e => {
+  const btn = e.target.closest(".bubble[data-k]");
+  if (!btn) return;
+  openStage(btn.dataset.k, btn);
+});
+
+function rowsHTML(pairs) {
+  return pairs.map(([l, v]) => `<div class="row"><span class="lbl">${l}</span><span class="val">${v}</span></div>`).join("");
+}
+
+const CONTACT_ICONS = {
+  github: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 4l-4 16"/></svg>`,
+  email: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>`,
+  wechat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 10.3c0 3-3.1 5.4-6.9 5.4-.8 0-1.6-.1-2.3-.4L6.5 17l1-2.3c-.9-1-1.4-2.2-1.4-3.6 0-3 3.1-5.4 6.9-5.4s6.5 2.3 6.5 4.6Z"/><path d="M6.2 14.7c-1.2-.8-1.9-1.9-1.9-3.2 0-2.2 2.2-4 4.9-4"/><circle cx="10" cy="10" r=".7" fill="currentColor"/><circle cx="15" cy="10" r=".7" fill="currentColor"/></svg>`,
+  qq: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="3.3"/><path d="M7.3 18.5c.5-4.1 2.1-6.2 4.7-6.2s4.2 2.1 4.7 6.2"/><path d="M8.4 19.1 6.7 21M15.6 19.1l1.7 1.9M9.4 14.8h5.2"/></svg>`
+};
+function contactHTML(l) {
+  const icon = CONTACT_ICONS[l.icon] || "";
+  const content = `<span class="contact-icon">${icon}</span><span>${l.label}</span><span class="contact-note">${l.note}</span>`;
+  if (l.qr) return `<div class="contact-row">
+    <button class="m-link contact-trigger" type="button" data-art="contact-${l.icon}" aria-label="${l.label}二维码，点击放大">${content}<span class="contact-caret">⌄</span></button>
+    <div class="qr-popover" aria-hidden="true">
+      <div class="qr-image"><img src="${l.qr}" alt="${l.label}二维码，${l.qrNote}" /></div><span class="qr-caption">${l.qrNote}</span>
+    </div>
+  </div>`;
+  return `<a class="m-link" href="${l.url}" target="_blank" rel="noopener" style="margin-top:0;">${content}<span class="contact-arrow">↗</span></a>`;
+}
+
+/* 每个分类气泡展开后的滑动页 */
+const STAGES = {
+  about: {
+    pages: () => [
+      `<p class="s-tag">Basics</p><h4>基本信息</h4>
+       <div>${rowsHTML([["生日", PROFILE.born], ["星座", PROFILE.zodiac], ["MBTI", PROFILE.mbti], ["毕业于", PROFILE.school], ["生活于", PROFILE.city], ["专业", PROFILE.major]])}</div>`,
+      `<p class="s-tag">The name</p><h4>StrayBird 的名字</h4>
+       <p style="color:var(--muted);font-size:12.5px;">出自泰戈尔《飞鸟集》，却超脱于《飞鸟集》。</p>
+       <p style="margin-top:8px;">集子里的鸟会回到窗前唱歌，而 StrayBird 不再回还——它从诗中飞出，走向比远方更远的天。这个名字存着对崇高远方真挚的向往，也存着一个朴素的愿望：哪怕离群而飞，也要飞自己的轨迹、自己的诗。</p>`,
+      `<p class="s-tag">What I love</p><h4>喜欢的事</h4>
+       <p>${PROFILE.loves.join(" · ")}</p>
+       <p style="margin-top:10px;color:var(--muted);font-size:12.5px;">书影与歌都摆在"手边"那个气泡里，慢慢翻。</p>`
+    ]
+  },
+  thoughts: {
+    pages: () => [
+      `<p class="s-tag">Notes</p><h4>手记目录</h4>
+       <div class="s-list">${PROFILE.thoughts.map((t, i) =>
+         `<button class="s-item" data-art="note-${i}">
+            <span class="si-title">${t.title}</span>
+            <span class="si-meta">${t.tag}${t.date ? " · " + t.date : ""}</span>
+          </button>`).join("")}
+       </div>
+       <p style="margin-top:10px;color:var(--muted);font-size:11.5px;letter-spacing:.08em;">点标题，展开全文</p>`
+    ]
+  },
+  books: {
+    pages: () => [
+      `<p class="s-tag">A book</p><h4>手边这一本</h4>
+       <p style="font-family:var(--serif);font-size:17px;">《${PROFILE.readingNow.title}》</p>
+       <p style="margin-top:8px;">${PROFILE.readingNow.note}</p>`,
+      `<p class="s-tag">A film</p><h4>手边这一部</h4>
+       <p style="font-family:var(--serif);font-size:17px;">《${PROFILE.watchingNow.title}》</p>
+       <p style="margin-top:8px;">${PROFILE.watchingNow.note}</p>`,
+      `<p class="s-tag">A song</p><h4>手边这一首</h4>
+       <p style="font-family:var(--serif);font-size:17px;">《${PROFILE.listeningNow.title}》</p>
+       <p style="margin-top:8px;">${PROFILE.listeningNow.note}</p>`,
+      `<p class="s-tag">Taste map</p><h4>口味版图</h4>
+       <p style="color:var(--muted);font-size:12.5px;">从政治到历史，从哲学到人文社科，也读文学小说。</p>
+       <div class="chips" style="justify-content:center;margin-top:12px;">${PROFILE.reading.map(t => `<span class="chip">${t}</span>`).join("")}</div>`
+    ]
+  },
+  projects: {
+    pages: () => [
+      ...PROFILE.projects.map((pr, i) =>
+        `<p class="s-tag">${pr.tag}</p>
+         <button class="s-item" data-art="proj-${i}" style="border:none;background:none;padding:0 0 2px;box-shadow:none;">
+           <span class="si-title">${pr.emoji} ${pr.title}</span>
+           <span class="si-meta">点标题 · 看详细 ↗</span>
+         </button>
+         <p style="margin-top:10px;">${pr.desc}</p>
+         ${pr.chips.length ? `<div class="chips" style="justify-content:center;">${pr.chips.map(c => `<span class="chip">${c}</span>`).join("")}</div>` : ""}
+         ${pr.link ? `<a class="m-link" href="${pr.link}" target="_blank" rel="noopener">GitHub ↗</a>` : ""}`),
+      `<p class="s-tag">Toolbox</p><h4>常用技术栈</h4>
+       <p style="color:var(--muted);font-size:12.5px;">在这些项目里实际使用、持续打磨的工具。</p>
+       <div class="chips" style="justify-content:center;margin-top:14px;">${PROFILE.techStack.map(c => `<span class="chip">${c}</span>`).join("")}</div>`
+    ]
+  },
+  now: {
+    pages: () => [
+      `<p class="s-tag">Where I am</p><h4>此刻落在</h4>
+       <p style="font-family:var(--serif);font-size:17px;">${PROFILE.now.place}</p>
+       <p style="margin-top:8px;">${PROFILE.now.placeLine}</p>`,
+      `<p class="s-tag">Doing</p><h4>正在做</h4><p>${PROFILE.now.doing}</p>`,
+      `<p class="s-tag">Musing</p><h4>心里想着</h4><p>${PROFILE.now.musing}</p>`
+    ]
+  },
+  findme: {
+    pages: () => [
+      `<p class="s-tag">Find me</p><h4>穿过风来找我</h4>
+       <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;align-items:center;">
+       ${PROFILE.links.map(contactHTML).join("")}
+       </div>`
+    ]
+  }
+};
+const STAGE_META = {
+  about:    { emoji: "🕊️", title: "关于我",   sub: "About me" },
+  thoughts: { emoji: "🪶", title: "手记",     sub: "Notes" },
+  books:    { emoji: "☕", title: "手边",     sub: "At hand" },
+  projects: { emoji: "🛠️", title: "个人项目", sub: "Projects" },
+  now:      { emoji: "🧭", title: "此刻",     sub: "Now" },
+  findme:   { emoji: "📮", title: "找到我",   sub: "Find me" }
+};
+
+/* 文章注册表：手记与项目的"点标题看详细" */
+const ARTICLES = {};
+PROFILE.thoughts.forEach((t, i) => ARTICLES["note-" + i] = {
+  tag: t.tag, title: t.title, date: t.date || "",
+  paras: t.body && t.body.length ? t.body : [t.text || ""]
+});
+PROFILE.projects.forEach((pr, i) => ARTICLES["proj-" + i] = {
+  tag: pr.tag, title: pr.title, date: "",
+  paras: pr.detail && pr.detail.length ? pr.detail : [pr.desc],
+  chips: pr.chips || [], link: pr.link, screenshots: pr.screenshots || []
+});
+PROFILE.links.filter(l => l.qr).forEach(l => ARTICLES["contact-" + l.icon] = {
+  tag: "扫码添加", title: `${l.label} · ${l.note}`, date: "",
+  paras: [l.qrNote], image: l.qr, imageAlt: `${l.label}二维码，${l.qrNote}`
+});
+
+/* 大气泡：展开、滑动翻页、退出 */
+let openKey = null, sIdx = 0, sCount = 0, dragX = null, dragDX = 0, dragMoved = false, dragCaptured = false;
+let stageReturnFocus = null;
+
+function buildStage(key) {
+  const meta = STAGE_META[key];
+  $("#sEmoji").textContent = meta.emoji;
+  $("#sTitle").textContent = meta.title;
+  $("#sSub").textContent = meta.sub;
+  $("#sChipEmoji").textContent = meta.emoji;
+  $("#sChipTitle").textContent = meta.title;
+  const pages = STAGES[key].pages();
+  sCount = pages.length; sIdx = 0;
+  stageBig.classList.toggle("single", sCount === 1);
+  sTrack.innerHTML = pages.map(p => `<div class="s-page"><div class="s-inner">${p}</div></div>`).join("");
+  sDots.innerHTML = pages.map((_, i) => `<button class="s-dot" data-i="${i}" aria-label="第 ${i + 1} 页"></button>`).join("");
+  goPage(0, true);
+}
+function goPage(i, instant) {
+  sIdx = Math.max(0, Math.min(sCount - 1, i));
+  if (instant) sTrack.style.transition = "none";
+  sTrack.style.transform = `translateX(${-sIdx * 100}%)`;
+  if (instant) requestAnimationFrame(() => { sTrack.style.transition = ""; });
+  sDots.querySelectorAll(".s-dot").forEach((d, j) => d.classList.toggle("on", j === sIdx));
+  $("#sPrev").disabled = sIdx === 0;
+  $("#sNext").disabled = sIdx === sCount - 1;
+}
+$("#sPrev").addEventListener("click", () => goPage(sIdx - 1));
+$("#sNext").addEventListener("click", () => goPage(sIdx + 1));
+sDots.addEventListener("click", e => {
+  const d = e.target.closest(".s-dot");
+  if (d) goPage(+d.dataset.i);
+});
+
+/* 滑动翻页 */
+sViewport.addEventListener("pointerdown", e => {
+  dragX = e.clientX; dragDX = 0; dragMoved = false; dragCaptured = false;
+  sTrack.style.transition = "none";
+});
+sViewport.addEventListener("pointermove", e => {
+  if (dragX === null) return;
+  dragDX = e.clientX - dragX;
+  if (Math.abs(dragDX) > 8) {
+    dragMoved = true;
+    // 只有真的开始横向滑动时才捕获指针；提前捕获会让普通点击丢失标题按钮这个 target。
+    if (!dragCaptured) {
+      try { sViewport.setPointerCapture(e.pointerId); dragCaptured = true; } catch (_) {}
+    }
+  }
+  sTrack.style.transform = `translateX(calc(${-sIdx * 100}% + ${dragDX}px))`;
+});
+function endDrag(e) {
+  if (dragX === null) return;
+  sTrack.style.transition = "";
+  if (Math.abs(dragDX) > 46) goPage(sIdx + (dragDX < 0 ? 1 : -1));
+  else goPage(sIdx);
+  if (dragCaptured && e && sViewport.hasPointerCapture?.(e.pointerId)) {
+    try { sViewport.releasePointerCapture(e.pointerId); } catch (_) {}
+  }
+  dragX = null; dragDX = 0; dragCaptured = false;
+}
+sViewport.addEventListener("pointerup", endDrag);
+sViewport.addEventListener("pointercancel", endDrag);
+addEventListener("pointerup", endDrag);
+addEventListener("pointercancel", endDrag);
+/* 点目录条目 → 展开文章 */
+sViewport.addEventListener("click", e => {
+  if (dragMoved) { dragMoved = false; return; }
+  const it = e.target.closest("[data-art]");
+  if (!it) return;
+  e.stopPropagation();
+  openArticle(it.dataset.art, it);
+});
+
+/* 二级导航：大气泡缩到左上角，文章在页面中间展开 */
+const reader = $("#reader");
+let view = "circle";   // circle = 大气泡 | article = 阅读页
+let articleReturnFocus = null;
+
+function openArticle(key, trigger) {
+  const a = ARTICLES[key];
+  if (!a || !openKey) return;
+  articleReturnFocus = trigger || document.activeElement;
+  view = "article";
+  $("#rTag").textContent = a.tag || "";
+  $("#rTitle").textContent = a.title;
+  $("#rDate").textContent = a.date || "";
+  const attach =
+    (a.chips && a.chips.length ? `<div class="chips" style="justify-content:center;">${a.chips.map(c => `<span class="chip">${c}</span>`).join("")}</div>` : "") +
+    (a.link ? `<a class="m-link" href="${a.link}" target="_blank" rel="noopener">GitHub ↗</a>` : "");
+  const image = a.image ? `<figure class="r-qr"><img src="${a.image}" alt="${a.imageAlt || ""}" /></figure>` : "";
+  const screenshots = a.screenshots && a.screenshots.length
+    ? `<div class="r-shots">${a.screenshots.map(s => `<figure class="r-shot ${s.layout === "portrait" ? "portrait" : "wide"}"><a class="r-shot-link" href="${s.src}" target="_blank" rel="noopener" title="查看原图"><img src="${s.src}" alt="${s.alt || ""}" loading="lazy" /></a><figcaption>${s.caption || ""}</figcaption></figure>`).join("")}</div>`
+    : "";
+  $("#rBody").innerHTML = image + screenshots + a.paras.map(p => `<p>${p}</p>`).join("") +
+    (attach ? `<div class="r-attach">${attach}</div>` : "");
+  reader.scrollTop = 0;
+  reader.classList.add("open");
+  reader.setAttribute("aria-hidden", "false");
+  stageBig.classList.add("min");
+  placeStageChip();
+  requestAnimationFrame(() => $("#rClose").focus({ preventScroll: true }));
+}
+function stageDiameter() {
+  return Math.round(Math.min(innerWidth, innerHeight) * (innerWidth < 720 ? .8 : .62));
+}
+function placeStageCircle() {
+  const D = stageDiameter();
+  const sb = stageBig.style;
+  sb.left = Math.round((innerWidth - D) / 2) + "px";
+  sb.top = Math.round((innerHeight - D) / 2) + "px";
+  sb.width = D + "px"; sb.height = D + "px";
+}
+function placeStageChip() {
+  const mobile = innerWidth < 720;
+  const edge = mobile ? 12 : 22;
+  const size = mobile ? 88 : 112;
+  const sb = stageBig.style;
+  sb.left = edge + "px"; sb.top = edge + "px";
+  sb.width = size + "px"; sb.height = size + "px";
+}
+function resetArticleView() {
+  view = "circle";
+  articleReturnFocus = null;
+  reader.classList.remove("open");
+  reader.setAttribute("aria-hidden", "true");
+  stageBig.classList.remove("min");
+}
+function closeArticle() {
+  if (view !== "article") return;
+  const returnFocus = articleReturnFocus;
+  articleReturnFocus = null;
+  resetArticleView();
+  placeStageCircle();
+  requestAnimationFrame(() => {
+    if (returnFocus && returnFocus.isConnected) returnFocus.focus({ preventScroll: true });
+  });
+}
+$("#rClose").addEventListener("click", e => { e.stopPropagation(); closeArticle(); });
+$("#sChip").addEventListener("click", e => { e.stopPropagation(); closeArticle(); });
+
+function openStage(key, bubbleEl) {
+  if (openKey) return;
+  resetArticleView();
+  stageReturnFocus = bubbleEl;
+  openKey = key;
+  buildStage(key);
+  const r = bubbleEl.getBoundingClientRect();
+  const sb = stageBig.style;
+  sb.transition = "none";
+  sb.left = r.left + "px"; sb.top = r.top + "px";
+  sb.width = r.width + "px"; sb.height = r.height + "px";
+  stageBig.setAttribute("aria-hidden", "false");
+  void stageBig.offsetWidth;
+  sb.transition = "";
+  requestAnimationFrame(() => {
+    placeStageCircle();
+    stageBig.classList.add("open");
+  });
+  bubblesEl.classList.add("zoomed");
+}
+function closeStage() {
+  if (!openKey) return;
+  const returnFocus = stageReturnFocus;
+  stageReturnFocus = null;
+  resetArticleView();
+  const b = bubblesEl.querySelector(`[data-k="${openKey}"]`);
+  openKey = null;
+  if (b) {
+    const r = b.getBoundingClientRect();
+    const sb = stageBig.style;
+    sb.left = r.left + "px"; sb.top = r.top + "px";
+    sb.width = r.width + "px"; sb.height = r.height + "px";
+  }
+  stageBig.classList.remove("open");
+  stageBig.setAttribute("aria-hidden", "true");
+  bubblesEl.classList.remove("zoomed");
+  requestAnimationFrame(() => {
+    if (!scene2.hidden && returnFocus && returnFocus.isConnected) returnFocus.focus({ preventScroll: true });
+  });
+}
+/* 点气泡外任意处退出（气泡圆内不退，圆的方角区域算外面） */
+document.addEventListener("click", e => {
+  if (!openKey) return;
+  if (e.target.closest && e.target.closest(".bubble")) return;
+  if (view === "article") {
+    if (reader.contains(e.target) || stageBig.contains(e.target)) return;
+    closeArticle();
+    return;
+  }
+  if (stageBig.contains(e.target)) {
+    if (e.target.closest && e.target.closest("button, a")) return;
+    const r = stageBig.getBoundingClientRect();
+    const inside = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) <= r.width / 2;
+    if (!inside) closeStage();
+  } else closeStage();
+});
+addEventListener("keydown", e => {
+  if (e.key !== "Escape" || !openKey) return;
+  if (view === "article") closeArticle();
+  else closeStage();
+});
+addEventListener("resize", () => {
+  if (!openKey) return;
+  if (view === "article") placeStageChip();
+  else placeStageCircle();
+});
+
+/* 光尘 */
+for (let i = 0; i < 7; i++) {
+  const m = document.createElement("div");
+  m.className = "mote";
+  const sz = 3 + Math.random() * 3;
+  m.style.cssText = `left:${6 + Math.random() * 88}%;width:${sz}px;height:${sz}px;animation-duration:${13 + Math.random() * 9}s;animation-delay:-${Math.random() * 14}s;`;
+  scene2.appendChild(m);
+}
+
+function enterGarden() {
+  scene2.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => scene2.classList.add("in")));
+}
+
+/* 回到纸上，再写一页 */
+perch.addEventListener("click", () => {
+  if (openKey) closeStage();
+  else resetArticleView();
+  phase = 0; writing = false; introDone = false; flying = false;
+  clearTimeout(autoFly); revealTimers.forEach(clearTimeout);
+  buildIntro();
+  introEl.classList.remove("fade");
+  paperWrap.classList.remove("rolling");
+  scrollEl.classList.remove("in", "idle", "taken");
+  scrollEl.style.transform = "";
+  bird.classList.remove("show");
+  pen.classList.remove("off");
+  scene2.classList.remove("in");
+  scene2.hidden = true;
+  scene1.classList.remove("gone");
+  scene1.hidden = false;
+  setHint(HINT_0, false);
+  requestAnimationFrame(() => scene1.focus({ preventScroll: true }));
+});
+
+/* ---------- 启动 ---------- */
+document.getElementById("year").textContent = new Date().getFullYear();
+requestAnimationFrame(() => scene1.classList.add("in"));
+setTimeout(() => setHint(HINT_0, false), 1300);
+</script>
+</body>
+</html>
